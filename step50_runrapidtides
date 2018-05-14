@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import glob
+import sys
+import os
+from os.path import join as pjoin
+import subprocess
+import re
+import shutil
+from tempfile import mkstemp
+
+
+
+def usage():
+    print("")
+    print("step40_runrapidtides run FSL preprocessing on the datasets")
+    print("")
+    print("    usage:  step10_preprocbold")
+    print("")
+
+
+def sed(pattern, replace, source, dest=None, count=0):
+    """Reads a source file and writes the destination file.
+
+    In each line, replaces pattern with replace.
+
+    Args:
+        pattern (str): pattern to match (can be re.pattern)
+        replace (str): replacement str
+        source  (str): input filename
+        count (int): number of occurrences to replace
+        dest (str):   destination filename, if not given, source will be over written.        
+    """
+
+    fin = open(source, 'r')
+    num_replaced = count
+
+    if dest:
+        fout = open(dest, 'w')
+    else:
+        fd, name = mkstemp()
+        fout = open(name, 'w')
+
+    for line in fin:
+        out = re.sub(pattern, replace, line)
+        fout.write(out)
+
+        if out != line:
+            num_replaced += 1
+        if count and num_replaced > count:
+            break
+    try:
+        fout.writelines(fin.readlines())
+    except Exception as E:
+        raise E
+
+    fin.close()
+    fout.close()
+
+    if not dest:
+        shutil.move(name, source) 
+
+
+def main():
+    fake = False
+
+    args = sys.argv[1:]
+    if len(args) != 0:
+        print('step50_runrapidtides - run the rapidtide delay analyses')
+        usage()
+        exit()
+
+    # determine which files are there to be analyzed
+    rootdir = os.path.abspath('..')
+    #print(rootdir)
+    fmrinames = sorted(glob.glob(pjoin(rootdir, 'sub-*', 'proc', '*.feat', 'ICA_AROMA', 'denoised_func_data_nonaggr.nii.gz'))) 
+    #print(fmrinames)
+
+    # make sure there is a place to put the results
+    outputfiledir = os.path.join(rootdir, 'analysis', 'movies')
+    #print(outputfiledir)
+    try:
+        os.makedirs(outputfiledir)
+    except OSError:
+        pass
+
+    # loop over all resting state files
+    for theinputfile in fmrinames:
+        # get the important components of the path
+        procpath = os.path.dirname(os.path.dirname(theinputfile))
+        temp, scandir = os.path.split(procpath)
+        scandir = os.path.splitext(scandir)[0]
+        subject = os.path.basename(os.path.dirname(temp))
+        theoutputroot = os.path.join(outputfiledir, subject + '_' + scandir)
+
+        # and launch the processing
+        rapidtidecmd = ['fsl_sub', '/cm/shared/anaconda3/bin/rapidtide2x', theinputfile, theoutputroot]
+        rapidtidecmd.append('-L')
+        rapidtidecmd.append('--refinepasses=3')
+        rapidtidecmd.append('--refineoffset')
+        #rapidtidecmd.append('--lagmaxthresh=10')
+        #rapidtidecmd.append('--ampthresh=0.2')
+        rapidtidecmd.append('-r')
+        rapidtidecmd.append('-10,10')
+        #rapidtidecmd.append('--noglm')
+        rapidtidecmd.append('-f')
+        rapidtidecmd.append('-2.65')
+
+        if fake:
+            print(' '.join(rapidtidecmd))
+        else:
+            subprocess.call(rapidtidecmd)
+
+
+if __name__ == "__main__":
+    main()

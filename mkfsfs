@@ -1,0 +1,32 @@
+#!/bin/csh -f
+
+#'O2_run-01_pcasl'
+#'O2_run-02_pcasl'
+#'air_run-01_pcasl'
+#'air_run-02_pcasl'
+#'carbogen_run-01_pcasl'
+#'carbogen_run-02_pcasl'
+
+set basepath = '\/Users\/frederic\/Documents\/MR_data\/CVRinHnD'
+set fslpath = `echo $FSLDIR | sed 's/\//\\\//g'`
+rm -rf preprocfsfs
+mkdir preprocfsfs
+
+rm -f runpreprocs
+echo "#\!/bin/csh -f" > runpreprocs
+foreach subj ( sub-02 )
+    foreach run ( 'block_O2_mag_bold 600' 'block_carbogen_mag_bold 600' 'breathhold_air_mag_bold 480' 'resting_O2_mag_bold 480' 'resting_air_mag_bold 480' 'resting_carbogen_mag_bold 480')
+        set runname=`echo $run | awk '{print $1}'`
+        set npts=`echo $run | awk '{print $2}'`
+        cat BOLD_preproc_template.fsf | \
+            sed 's/NNNNN/'$npts'/g' | \
+            sed 's/SSSSS/'$subj'/g' | \
+            sed 's/PPPPP/'$basepath'/g' | \
+            sed 's/QQQQQ/'$fslpath'/g' | \
+            sed 's/RRRRR/'$runname'/g' > \
+            preprocfsfs/$subj'_'$runname'_preproc.fsf'
+        echo 'fsl_sub '$FSLDIR'/feat '`pwd`'/preprocfsfs/'$subj'_'$runname'_preproc.fsf' >> runpreprocs
+        end
+    end
+
+chmod a+x runpreprocs

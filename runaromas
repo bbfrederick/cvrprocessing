@@ -1,0 +1,13 @@
+#!/bin/csh -f
+
+set icaaromadir = '/usr/local/ICA-AROMA'
+set topdir=/data/frederic/CVRinHnD
+
+foreach subj ( sub-02 )
+    foreach run ( 'block_O2_mag_bold 600' 'block_carbogen_mag_bold 600' 'breathhold_air_mag_bold 480' 'resting_O2_mag_bold 480' 'resting_air_mag_bold 480' 'resting_carbogen_mag_bold 480')
+        set runname=`echo $run | awk '{print $1}'`
+        set npts=`echo $run | awk '{print $2}'`
+        set featdir = `grep outputdir preprocfsfs/$subj'_'$runname'_preproc.fsf' | awk '{print $3}' | sed 's/\"//g'`'.feat'
+        fsl_sub $icaaromadir/ICA_AROMA.py -f $featdir -o $featdir/ICA-AROMA &
+        end
+    end

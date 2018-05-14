@@ -1,0 +1,3 @@
+ICA_AROMA.py -f /data/frederic/CVRinHnD/cvr_test_003/mr_nifti/BOLD_AIR_RESTING/preproc.feat -o /data/frederic/CVRinHnD/cvr_test_003/mr_nifti/BOLD_AIR_RESTING/preproc.feat/ICA-AROMA
+ICA_AROMA.py -f /data/frederic/CVRinHnD/cvr_test_003/mr_nifti/BOLD_AIR_RESTING/preproc.feat -o /data/frederic/CVRinHnD/cvr_test_003/mr_nifti/BOLD_AIR_RESTING/preproc.feat/ICA-AROMA
+ICA_AROMA.py -f /data/frederic/CVRinHnD/cvr_test_003/mr_nifti/BOLD_AIR_RESTING/preproc.feat -o /data/frederic/CVRinHnD/cvr_test_003/mr_nifti/BOLD_AIR_RESTING/preproc.feat/ICA-AROMA

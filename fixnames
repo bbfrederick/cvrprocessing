@@ -1,0 +1,132 @@
+#!/bin/csh -f
+
+foreach type ( air carbogen O2 )
+    ls -1 ../sub*/func/*PCASL_$type*.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/PCASL_'$type'_1\.nii\.gzXXX/task-'$type'_acq-pcasl1_asl\.nii\.gz/g' | \
+        sed 's/PCASL_'$type'_2\.nii\.gzXXX/task-'$type'_acq-pcasl2_asl\.nii\.gz/g'
+    end
+
+foreach type ( air carbogen O2 )
+    ls -1 ../sub*/func/*PCASL_$type*.json | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/PCASL_'$type'_1\.jsonXXX/task-'$type'_acq-pcasl1_asl\.json/g' | \
+        sed 's/PCASL_'$type'_2\.jsonXXX/task-'$type'_acq-pcasl2_asl\.json/g'
+    end
+
+foreach type ( air carbogen O2 )
+    ls -1 ../sub*/func/*BOLD_$type*block*.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/BOLD_'$type'_block_phase\.nii\.gzXXX/task-block_acq-'$type'_rec-phase_bold\.nii\.gz/g' | \
+        sed 's/BOLD_'$type'_block_mag\.nii\.gzXXX/task-block_acq-'$type'_rec-mag_bold\.nii\.gz/g'
+    end
+
+foreach type ( air carbogen O2 )
+    ls -1 ../sub*/func/*BOLD_$type*block*.json | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/BOLD_'$type'_block_phase\.jsonXXX/task-block_acq-'$type'_rec-phase_bold\.json/g' | \
+        sed 's/BOLD_'$type'_block_mag\.jsonXXX/task-block_acq-'$type'_rec-mag_bold\.json/g'
+
+foreach type ( air carbogen O2 )
+    ls -1 ../sub*/func/*BOLD_$type*resting*.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/BOLD_'$type'_resting_phase\.nii\.gzXXX/task-rest_acq-'$type'_rec-phase_bold\.nii\.gz/g' | \
+        sed 's/BOLD_'$type'_resting_mag\.nii\.gzXXX/task-rest_acq-'$type'_rec-mag_bold\.nii\.gz/g'
+    end
+
+foreach type ( air carbogen O2 )
+    ls -1 ../sub*/func/*BOLD_$type*resting*.json | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/BOLD_'$type'_resting_phase\.jsonXXX/task-rest_acq-'$type'_rec-phase_bold\.json/g' | \
+        sed 's/BOLD_'$type'_resting_mag\.jsonXXX/task-rest_acq-'$type'_rec-mag_bold\.json/g' 
+foreach type ( air )
+    ls -1 ../sub*/func/*BOLD_$type*breathhold*.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/BOLD_'$type'_breathhold_phase\.nii\.gzXXX/task-breathhold_acq-'$type'_rec-phase_bold\.nii\.gz/g' | \
+        sed 's/BOLD_'$type'_breathhold_mag\.nii\.gzXXX/task-breathhold_acq-'$type'_rec-mag_bold\.nii\.gz/g'
+    end
+
+#foreach type ( air )
+#    ls -1 ../sub*/func/*BOLD_$type*breathhold*.json | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/BOLD_'$type'_breathhold_phase\.jsonXXX/task-breathhold_acq-'$type'_rec-phase_bold\.json/g' | \
+#        sed 's/BOLD_'$type'_breathhold_mag\.jsonXXX/task-breathhold_acq-'$type'_rec-mag_bold\.json/g'
+#    end
+
+#foreach type ( air carbogen O2 )
+#    ls -1 ../sub*/func/*[0123456789]_resting_$type'_'*.nii.gz | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/resting_'$type'_phase_bold\.nii\.gzXXX/task-rest_acq-'$type'_rec-phase_bold\.nii\.gz/g' | \
+#        sed 's/resting_'$type'_mag_bold\.nii\.gzXXX/task-rest_acq-'$type'_rec-mag_bold\.nii\.gz/g'
+#    end
+
+#foreach type ( air carbogen O2 )
+#    ls -1 ../sub*/func/*[0123456789]_resting_$type'_'*.json | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/resting_'$type'_phase_bold\.jsonXXX/task-rest_acq-'$type'_rec-phase_bold\.json/g' | \
+#        sed 's/resting_'$type'_mag_bold\.jsonXXX/task-rest_acq-'$type'_rec-mag_bold\.json/g'
+
+#foreach type ( air carbogen O2 )
+#    ls -1 ../sub*/func/*[0123456789]_block_$type'_'*.nii.gz | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/block_'$type'_phase_bold\.nii\.gzXXX/task-block_acq-'$type'_rec-phase_bold\.nii\.gz/g' | \
+#        sed 's/block_'$type'_mag_bold\.nii\.gzXXX/task-block_acq-'$type'_rec-mag_bold\.nii\.gz/g'
+#    end
+#
+#foreach type ( air carbogen O2 )
+#    ls -1 ../sub*/func/*[0123456789]_block_$type'_'*.json | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/block_'$type'_phase_bold\.jsonXXX/task-block_acq-'$type'_rec-phase_bold\.json/g' | \
+#        sed 's/block_'$type'_mag_bold\.jsonXXX/task-block_acq-'$type'_rec-mag_bold\.json/g'
+#
+#foreach type ( air )
+#    ls -1 ../sub*/func/*[0123456789]_breathhold_$type'_'*.nii.gz | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/breathhold_'$type'_phase_bold\.nii\.gzXXX/task-breathhold_acq-'$type'_rec-phase_bold\.nii\.gz/g' | \
+#        sed 's/breathhold_'$type'_mag_bold\.nii\.gzXXX/task-breathhold_acq-'$type'_rec-mag_bold\.nii\.gz/g'
+#    end
+#
+#foreach type ( air )
+#    ls -1 ../sub*/func/*[0123456789]_breathhold_$type'_'*.json | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/breathhold_'$type'_phase_bold\.jsonXXX/task-breathhold_acq-'$type'_rec-phase_bold\.json/g' | \
+#        sed 's/breathhold_'$type'_mag_bold\.jsonXXX/task-breathhold_acq-'$type'_rec-mag_bold\.json/g'
+#    end
+
+#foreach type ( air carbogen O2 )
+#    ls -1 ../sub*/func/*[0123456789]_$type'_'*asl.nii.gz | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/'$type'_run-01_pcasl\.nii\.gzXXX/task-'$type'_acq-pcasl1_asl\.nii\.gz/g' | \
+#        sed 's/'$type'_run-02_pcasl\.nii\.gzXXX/task-'$type'_acq-pcasl2_asl\.nii\.gz/g'
+#    end
+
+#foreach type ( air carbogen O2 )
+#    ls -1 ../sub*/func/*[0123456789]_$type'_'*asl.json | \
+#        awk '{print "mv "$1" "$1"XXX"}' | \
+#        sed 's/'$type'_run-01_pcasl\.jsonXXX/task-'$type'_acq-pcasl1_asl\.json/g' | \
+#        sed 's/'$type'_run-02_pcasl\.jsonXXX/task-'$type'_acq-pcasl2_asl\.json/g'
+#    end
+
+ls -1 ../sub*/anat/*3dtof.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/3dtof\.nii\.gzXXX/acq-tof_angio\.nii\.gz/g'
+
+ls -1 ../sub*/anat/*3dtof.json | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/3dtof\.jsonXXX/acq-tof_angio\.json/g'
+
+ls -1 ../sub*/anat/*[0123456789]_tof.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/tof\.nii\.gzXXX/acq-tof_angio\.nii\.gz/g'
+
+ls -1 ../sub*/anat/*[0123456789]_tof.json | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/tof\.jsonXXX/acq-tof_angio\.json/g'
+
+ls -1 ../sub*/anat/*[0123456789]_PC_30.nii.gz | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/PC_30\.nii\.gzXXX/acq-PC30_angio\.nii\.gz/g'
+
+ls -1 ../sub*/anat/*[0123456789]_PC_30.json | \
+        awk '{print "mv "$1" "$1"XXX"}' | \
+        sed 's/PC_30\.jsonXXX/acq-PC30_angio\.json/g'

@@ -1,0 +1,12 @@
+#!/bin/csh -f
+
+set subj=cvr_test_003
+
+foreach run ( BOLD_AIR_RESTING BOLD_CO_RESTING BOLD_O2_RESTING )
+    set fmrifile=../$subj/mr_nifti/$run/resting.ica/ICA-AROMA/denoised_func_data_nonaggr.nii.gz
+    fslmaths $fmrifile -Tstd movies/$subj'_'$run'_std'
+    fslmaths $fmrifile -Tmean movies/$subj'_'$run'_mean'
+    set threshval=`fslstats movies/$subj'_'$run'_mean' -r | awk '{print $2/10.0}'`
+    fslmaths movies/$subj'_'$run'_mean' -thr threshval -bin movies/$subj'_'$run'_mask'
+    fslmaths movies/$subj'_'$run'_mean' -div movies/$subj'_'$run'_std' -nan -mul movies/$subj'_'$run'_mask' movies/$subj'_'$run'_normvar'
+    end

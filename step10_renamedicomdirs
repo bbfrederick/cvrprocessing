@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import glob
+import sys
+import os
+from os.path import join as pjoin
+import subprocess
+
+def usage():
+    print("")
+    print("step10_renamedicomdirs - rename directories to standard form")
+    print("")
+    print("    usage:  step10_renamedicomdirs subjectdirectory")
+    print("")
+
+
+def movedcmdir(sourcename, suffix):
+    dashloc = sourcename.find('_', -3, -1)
+    if suffix is None:
+        destname = sourcename[0:dashloc]
+    else:
+        destname = sourcename[0:dashloc + 1] + suffix
+    if os.path.isdir(destname):
+        print('destination directory already exists - skipping')
+    else:
+        print('moving', sourcename, 'to', destname)
+        os.rename(sourcename, destname)
+
+
+def main():
+    args = sys.argv[1:]
+    if len(args) != 1:
+        print('step10_reanamedicomdirs requires the path to a subject directory')
+        usage()
+        exit()
+
+    # determine which files are there to be analyzed
+    subjectdir = args[0]
+
+    nonfmriscans = ['MEMPRAGE_gr2_RMS', 'PC_3D_30_30_30', 'tof_fl3d_tra_p2', 'MPCASL3DCO_1', 'MPCASL3DCO_2', 'MPCASL3DMA_1', 'MPCASL3DMA_2', 'MPCASL3DO2_1', 'MPCASL3DO2_2']
+    for scanname in nonfmriscans:
+        dirnames = sorted(glob.glob(pjoin(subjectdir, 'sourcedata', scanname + '_[0-9]'))) \
+            + sorted(glob.glob(pjoin(subjectdir, 'sourcedata', scanname + '_[0-9][0-9]')))
+        if len(dirnames) == 1:
+            movedcmdir(dirnames[0], None)
+        else:
+            print('did not find', scanname, ': skipping')
+
+    fmriscans = ['BOLD_AIR_RESTING', 'BOLD_CO_RESTING', 'BOLD_O2_RESTING', 'BOLD_AIR_breathhold', 'BOLD_CO_BLOCK', 'BOLD_O2_BLOCK']
+    for scanname in fmriscans:
+        dirnames = (sorted(glob.glob(pjoin(subjectdir, 'sourcedata', scanname + '_[0-9]'))) \
+            + sorted(glob.glob(pjoin(subjectdir, 'sourcedata', scanname + '_[0-9][0-9]'))))[-2:]
+        if len(dirnames) == 2:
+            movedcmdir(dirnames[0], 'mag')
+            movedcmdir(dirnames[1], 'phase')
+        else:
+            print('did not find', scanname, ': skipping')
+
+
+if __name__ == "__main__":
+    main()

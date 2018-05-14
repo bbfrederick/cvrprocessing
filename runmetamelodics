@@ -1,0 +1,14 @@
+#!/bin/csh -f
+
+rm -f melodic.[oe]* mergeruns*.[oe]*
+
+set subj=003
+set dimensionality=50
+set runs=10
+foreach run ( AIR_RESTING O2_RESTING CO_RESTING )
+    metamelodic \
+        ../cvr_test_$subj/mr_nifti/BOLD_$run/preproc.feat/ICA-AROMA/denoised_func_data_nonaggr.nii.gz \
+        ../cvr_test_$subj/mr_nifti/BOLD_$run/preproc.feat/mask.nii.gz \
+        ../cvr_test_$subj/mr_nifti/BOLD_$run/preproc.feat/example_func.nii.gz \
+        movies/$subj'_'$run $dimensionality $runs
+    end

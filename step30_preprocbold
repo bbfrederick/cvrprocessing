@@ -1,0 +1,167 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import glob
+import sys
+import os
+from os.path import join as pjoin
+import subprocess
+import re
+import shutil
+from tempfile import mkstemp
+
+
+
+def usage():
+    print("")
+    print("step30_preprocbold - run FSL preprocessing on the datasets")
+    print("")
+    print("    usage:  step30_preprocbold")
+    print("")
+
+
+def getniftiheader(inputfile):
+    hdrdict = {}
+    fslhdcmd = [os.path.join(os.getenv('FSLDIR'), 'bin', 'fslhd'), inputfile]
+    for theline in subprocess.check_output(fslhdcmd).decode('utf8').split('\n'):
+        if theline is not '':
+            linestuff = theline.split()
+            thekey = linestuff[0]
+            theval = ' '.join(linestuff[1:])
+            hdrdict[thekey] = theval
+    return hdrdict
+
+
+def sed(pattern, replace, source, dest=None, count=0):
+    """Reads a source file and writes the destination file.
+
+    In each line, replaces pattern with replace.
+
+    Args:
+        pattern (str): pattern to match (can be re.pattern)
+        replace (str): replacement str
+        source  (str): input filename
+        count (int): number of occurrences to replace
+        dest (str):   destination filename, if not given, source will be over written.        
+    """
+
+    fin = open(source, 'r')
+    num_replaced = count
+
+    if dest:
+        fout = open(dest, 'w')
+    else:
+        fd, name = mkstemp()
+        fout = open(name, 'w')
+
+    for line in fin:
+        out = re.sub(pattern, replace, line)
+        fout.write(out)
+
+        if out != line:
+            num_replaced += 1
+        if count and num_replaced > count:
+            break
+    try:
+        fout.writelines(fin.readlines())
+    except Exception as E:
+        raise E
+
+    fin.close()
+    fout.close()
+
+    if not dest:
+        shutil.move(name, source) 
+
+
+def main():
+    fake = False
+
+    args = sys.argv[1:]
+    if len(args) != 1:
+        print('step30_preprocbold - run FSL preprocessing')
+        usage()
+        exit()
+
+    # determine which files are there to be analyzed
+    subjectdir = os.path.abspath(args[0])
+
+    # determine which files are there to be analyzed
+    rootdir = os.path.abspath('..')
+    funcnames = sorted(glob.glob(pjoin(subjectdir, 'func', '*resting*mag.nii.gz'))) + \
+                sorted(glob.glob(pjoin(subjectdir, 'func', '*breathhold*mag.nii.gz'))) + \
+                sorted(glob.glob(pjoin(subjectdir, 'func', '*block*mag.nii.gz'))) 
+    
+
+    # loop over all resting state files
+    for thefmriscan in funcnames:
+        # get the important components of the path
+        thefmriscan = os.path.splitext(os.path.splitext(thefmriscan)[0])[0]
+        funcdir, fmrifile = os.path.split(thefmriscan)
+        subjroot = os.path.dirname(funcdir)
+        dummy, subjnum = os.path.split(subjroot)
+        theprocroot = os.path.join(subjroot, 'proc')
+
+        # create the process directory if it doesn't exist
+        try:
+            os.makedirs(theprocroot)
+        except OSError:
+            pass
+
+        # get the name of the output feat directory
+        theprocdir = os.path.join(theprocroot, fmrifile)
+
+        # get the name of the matching anatomic file
+        theanatscan = os.path.splitext(os.path.splitext(glob.glob(pjoin(subjroot, 'anat', '*T1w_brain.nii.gz'))[0])[0])[0]
+
+        # get the name of the slice times file
+        slicetimefile = thefmriscan + '_slicetimes.txt'
+
+        # now make a .fsf file
+        hdrinfo = getniftiheader(thefmriscan)
+        tr = hdrinfo['pixdim4']
+        npts = hdrinfo['dim4']
+        thewarpres = '10'
+
+        if fmrifile.find('resting') > -1:
+            srcfsf = 'BOLD_preproc_template.fsf'
+            dostats = '0'
+            regressorfile = ''
+        elif fmrifile.find('breathhold') > -1:
+            srcfsf = 'BOLD_preproc_template.fsf'
+            dostats = '1'
+            regressorfile = os.path.join(rootdir, 'analysis', 'breathhold.txt')
+        elif fmrifile.find('block') > -1:
+            srcfsf = 'BOLD_preproc_template.fsf'
+            dostats = '1'
+            regressorfile = os.path.join(rootdir, 'analysis', 'gas.txt')
+        else:
+            print('unknown functional file type')
+            break
+        destfsf = os.path.join(subjroot, 'func', fmrifile + '_preproc.fsf')
+        sed('SCSCSC', fmrifile, srcfsf, destfsf)
+        sed('YYYYY', theprocdir, destfsf)
+        sed('NNNNN', npts, destfsf)
+        sed('TTTTT', tr, destfsf)
+        sed('PPPPP', subjectdir, destfsf)
+        sed('STSTST', dostats, destfsf)
+        sed('WWWWW', thewarpres, destfsf)
+        sed('ZZZZZ', theanatscan, destfsf)
+        sed('SSSSS', subjnum, destfsf)
+        sed('RRRRR', regressorfile, destfsf)
+        sed('QQQQQ', os.getenv('FSLDIR'), destfsf)
+ 
+        # remove any previous run directory
+        if not fake:
+            shutil.rmtree(theprocdir + '.feat', ignore_errors=True)
+
+        # and launch the processing
+        featcmd = ['fsl_sub', os.path.join(os.getenv('FSLDIR'), 'bin', 'feat'), destfsf]
+        if fake:
+            print(' '.join(featcmd))
+        else:
+            subprocess.call(featcmd)
+        
+
+if __name__ == "__main__":
+    main()

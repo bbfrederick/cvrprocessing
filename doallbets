@@ -1,0 +1,12 @@
+#cd ../sub-01/anat; bet sub-01_T1w sub-01_T1w_brain -c 63 133 165 -f 0.35 
+#cd ../sub-02/anat; bet sub-02_T1w sub-02_T1w_brain -c 63 133 165 -f 0.35
+#cd ../sub-04/anat; bet sub-03_T1w sub-03_T1w_brain -c 63 133 165 -f 0.35
+#cd ../sub-04/anat; bet sub-04_T1w sub-04_T1w_brain -c 63 133 165 -f 0.35 
+#cd ../sub-05/anat; bet sub-05_T1w sub-05_T1w_brain -c 62 109 175 -g -0.2 -f 0.25 
+#cd ../sub-06/anat; bet sub-06_T1w sub-06_T1w_brain -c 63 133 165 -f 0.35 
+#cd ../sub-07/anat; bet sub-07_T1w sub-07_T1w_brain -c 63 133 165 -f 0.35 
+#cd ../sub-08/anat; bet sub-08_T1w sub-08_T1w_brain -c 63 133 165 -f 0.35 
+#cd ../sub-09/anat; bet sub-09_T1w sub-09_T1w_brain -c 63 133 165 -f 0.35
+#cd ../sub-10/anat; bet sub-10_T1w sub-10_T1w_brain -c 63 133 165 -f 0.35
+cd ../sub-12/anat; bet sub-12_T1w sub-12_T1w_brain -c 61 131 165 -f 0.35 &
+cd ../sub-13/anat; bet sub-13_T1w sub-13_T1w_brain -c 63 116 148 -f 0.35 &

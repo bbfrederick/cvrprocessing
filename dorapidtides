@@ -1,0 +1,18 @@
+#!/bin/csh -f
+
+set thisdir=`pwd`
+foreach subjnum ( '002' )
+    #foreach run ( 'BOLD_CO 600' 'BOLD_O2 600' 'BOLD_CO_RESTING 480' 'BOLD_O2_RESTING 480' 'BOLD_AIR_RESTING 480' 'BOLD_AIR_breathhold 480')
+    foreach run ( 'BOLD_CO 600' 'BOLD_O2 600' )
+        set runname=`echo $run | awk '{print $1}'`
+        set npts=`echo $run | awk '{print $2}'`
+        set subj='cvr_test_'$subjnum
+        echo rapidtide2 \
+            $thisdir/../$subj/mr_nifti/$runname/preproc.feat/filtered_func_data.nii.gz \
+            $thisdir/movies/$subjnum'_'$runname \
+            -s 2 \
+            -F 0.0,0.2 \
+            --noglm \
+            --refinepasses=3
+        end
+    end

@@ -1,0 +1,435 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
+import sys
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import getopt
+import bioread
+import pandas as pd
+import glob
+import time
+from scipy import signal
+import json
+
+def marker_formatter(acq_filename, graph_sample_msec):
+    """ Return a function that turns a marker into a dict. """
+    def f(marker):
+        return {
+            'filename': acq_filename,
+            'time (s)': (marker.sample_index * graph_sample_msec) / 1000,
+            'label': marker.text,
+            'channel': marker.channel_name,
+            'type_code': marker.type_code,
+            'type': marker.type
+        }
+    return f
+
+def procmarker(marker, graph_sample_msec):
+    thetime = (marker.sample_index * graph_sample_msec) / 1000
+    markertype = ''
+    if marker.type_code == 'usr1':
+        return('start_scan', thetime)
+    elif marker.type_code == 'usr2':
+        return('end_scan', thetime)
+    elif marker.type_code == 'usr3':
+        return('start_gas', thetime)
+    elif marker.type_code == 'usr4':
+        return('end_gas', thetime)
+    else:
+        return('unknown', thetime)
+        
+
+def getsampletimes(channel):
+    sampletime = (channel['timeaxis'][-1] - channel['timeaxis'][0]) / len(channel['timeaxis'])
+    upsampletime = (channel['upsampled_timeaxis'][-1] - channel['upsampled_timeaxis'][0]) / len(channel['upsampled_timeaxis'])
+    return sampletime, upsampletime
+
+
+def genpulses(waveform, sampletime, numpulses, pulsespacing, pulseduration, starttime):
+    for pulse in range(0, numpulses):
+        pulsestart = starttime + pulse * pulsespacing
+        pulsestartpt = np.max([int(np.round(pulsestart/sampletime)), 0])
+        pulseend = pulsestart + pulseduration
+        pulseendpt = np.min([int(np.round(pulseend/sampletime) + 1), len(waveform) - 1])
+        if (pulsestartpt < len(waveform)) and (pulseendpt >= 0):
+            waveform[int(np.round(pulsestart/sampletime)):int(np.round(pulseend/sampletime) + 1)] = 4.0
+        
+
+def writewaves(name, starttime, endtime, samplerate, physiopath, timeaxis, o2, co2, resp=None, padtime=30.0):
+    startpt = int(np.round((starttime - padtime)/ samplerate)) 
+    endpt = int(np.round((endtime + padtime) / samplerate)) 
+    if startpt < 0:
+        startpt = 0
+    if endpt > len(timeaxis) - 1:
+        endpt = len(timeaxis) - 1
+    with open(os.path.join(physiopath, subjnum + '_' + name + '_biopac.txt'), 'w') as fp:
+        for i in range(startpt, endpt):
+            if resp is None:
+                fp.writelines(str(timeaxis[i] - starttime) + '\t' + str(o2[i]) + '\t' + str(co2[i]) + '\n')
+            else:
+                fp.writelines(str(timeaxis[i] - starttime) + '\t' + str(o2[i]) + '\t' + str(co2[i]) + '\t' + str(resp[i]) + '\n')
+    o2mean = np.mean(o2[startpt:endpt])
+    co2mean = np.mean(co2[startpt:endpt])
+    o2std = np.std(o2[startpt:endpt])
+    co2std = np.std(co2[startpt:endpt])
+    return o2mean, o2std, co2mean, co2std
+
+
+hammingwindows = {}
+def hamming(length):
+#   return 0.54 - 0.46 * np.cos((np.arange(0.0, float(length), 1.0) / float(length)) * 2.0 * np.pi)
+    try:
+        return hammingwindows[str(length)]
+    except:
+        hammingwindows[str(length)] = 0.54 - 0.46 * np.cos((np.arange(0.0, float(length), 1.0) / float(length)) * 2.0 * np.pi)
+        print('initialized hamming window for length', length)
+        return hammingwindows[str(length)]
+
+
+def finddelay(input1, input2, sampletime):
+    print('optimizing delay value')
+    #thewindow = hamming(len(input1))
+    thexcorr = signal.fftconvolve(input1, input2[::-1], mode='full')
+    xcorrlen = len(thexcorr)
+    xcorr_x = np.r_[0.0:xcorrlen] * sampletime - (xcorrlen * sampletime) / 2.0 + sampletime / 2.0
+    fig = plt.figure()
+    plt.plot(xcorr_x, thexcorr)
+    plt.show()
+    return xcorr_x[np.argmax(thexcorr)]
+
+
+def usage():
+    print("")
+    print("readbiopac - read a biopac acq file and convert to text")
+    print("")
+    print("    usage:  readbiopac inputfile [--noshow] [--gasdelay=DELAYTIME] [--imtimes] [--initoffset=OFFSET] [--noopt] [--trim]")
+    print("")
+
+# initialize variables
+display = True
+gasdelay = 0.0
+imtimes = False
+optimize = True
+trim = False
+initoffset = 0.0
+resttrs = 480
+breathtrs = 480
+blocktrs = 600
+pcasl1time = 197
+pcasl2time = 133
+tr = 0.75
+triggerexists = True
+respexists = True
+
+try:
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "X", ["noshow", "imtimes", "gasdelay=", "initoffset=", "noopt", "trim"])
+except getopt.GetoptError as err:
+    # print help information and exit:
+    print(str(err))  # will print something like "option -x not recognized"
+    usage()
+    sys.exit(2)
+
+if len(args) != 2:
+    print('readbiopac requires the names of an input and an output file')
+    usage()
+    exit()
+
+for o, a in opts:
+    if o == '--noshow':
+        display = False
+    elif o == "--initoffset":
+        imtimes = True
+        initoffset = float(a)
+        print('will start with an offset of', initoffset, 'seconds')
+    elif o == "--trim":
+        imtimes = True
+        trim = True
+        print('will trim output display to scan time')
+    elif o == "--noopt":
+        imtimes = True
+        optimize = False
+        print('will not optimize offset value')
+    elif o == "--imtimes":
+        imtimes = True
+        print('will look for image time files')
+    elif o == "--gasdelay":
+        gasdelay = float(a)
+        print('will correct for a', gasdelay, 'second delay in gas sampling')
+    else:
+        assert False, "unhandled option"
+
+inputfile = os.path.abspath(args[0])
+physiopath, inputname = os.path.split(inputfile)
+subjpath, dummy = os.path.split(physiopath)
+rootpath, subjnum = os.path.split(subjpath)
+print('about to read input file')
+
+data = bioread.read(inputfile)
+
+data.graph_header.file_revision
+
+channeldict = {}
+thelengths = []
+
+for idx,thechannel in enumerate(data.channels):
+    print('examining', data.channels[idx].name)
+    channelname = data.channels[idx].name
+    channeldict[channelname] = idx
+    print(channelname, 'found at index', idx)
+    print('\tSample rate:      ', data.channels[idx].samples_per_second)
+    print('\tFrequency divider:', data.channels[idx].frequency_divider)
+    print('\tPoints:           ', len(data.channels[idx].data))
+    print('\tUpsampled points: ', len(data.channels[idx].upsampled_data))
+    print('\traw_scale_factor: ', data.channels[idx].raw_scale_factor)
+    print('\traw_offset:       ', data.channels[idx].raw_offset)
+    print()
+    
+    channeldict[channelname] = {}
+    channeldict[channelname]['name'] = channelname
+    channeldict[channelname]['frequency_divider'] = data.channels[idx].frequency_divider
+    channeldict[channelname]['timeaxis'] = np.arange(0.0, len(data.channels[idx].data)) / data.channels[idx].samples_per_second
+    channeldict[channelname]['upsampled_timeaxis'] = np.arange(0.0, len(data.channels[idx].upsampled_data)) / (data.channels[idx].samples_per_second * data.channels[idx].frequency_divider)
+    if channelname == u'O2' or channelname == u'CO2':
+        channeldict[channelname]['timeaxis'] -= gasdelay
+        channeldict[channelname]['upsampled_timeaxis'] -= gasdelay
+    channeldict[channelname]['waveform'] = 1.0 * data.channels[idx].data
+    channeldict[channelname]['upsampled_waveform'] = 1.0 * data.channels[idx].upsampled_data
+    channeldict[channelname]['raw_scale_factor'] = 1.0 * data.channels[idx].raw_scale_factor
+    channeldict[channelname]['raw_offset'] = 1.0 * data.channels[idx].raw_offset
+    thelengths.append(len(data.channels[idx].upsampled_data))
+
+try:
+    thename = channeldict[u'Scanner Trigger']['name']
+except:
+    triggerexists = False
+        
+
+try:
+    thename = channeldict[u'Respiratory Belt - TSD160A - Differenti']['name']
+except:
+    respexists = False
+        
+if triggerexists:
+    sampletime, upsampletime = getsampletimes(channeldict[u'Scanner Trigger'])
+    triggeraxis = channeldict[u'Scanner Trigger']['upsampled_timeaxis'] 
+    triggerwaveform = channeldict[u'Scanner Trigger']['upsampled_waveform']
+else:
+    sampletime, upsampletime = getsampletimes(channeldict[u'O2'])
+    triggeraxis = channeldict[u'O2']['upsampled_timeaxis'] 
+    triggerwaveform = 0.0 * channeldict[u'O2']['upsampled_waveform']
+    currentloc = 0
+    currentval = 0.0
+    with open(inputfile, 'rb') as infile:
+        headers = bioread.read_headers(infile)
+        mf = marker_formatter(inputfile, headers.graph_header.sample_time)
+        for m in headers.event_markers:
+           mkrtype, mkrtime = procmarker(m, headers.graph_header.sample_time)
+           timept = int(np.round(mkrtime / upsampletime))
+           if timept <= len(triggeraxis):
+               if mkrtype == 'start_scan':
+                   triggerwaveform[currentloc:timept] = currentval 
+                   currentloc = timept
+                   currentval = 5.0
+               if mkrtype == 'end_scan':
+                   triggerwaveform[currentloc:timept] = currentval 
+                   currentloc = timept
+                   currentval = 0.0
+
+# find the length of the shortest upsampled timecourse, and limit to that
+safelength = np.min(thelengths)
+
+if imtimes:
+    # search for all the imtime files
+    funcpath = os.path.join(subjpath, 'func')
+    searchstring = os.path.join(funcpath, '*.json')
+    thefiles = glob.glob(searchstring)
+    events = {}
+    firsttime = 1000000000000.0
+
+    for filename in thefiles:
+        if filename.find('phase') == -1:
+            filepath, filebase = os.path.split(os.path.splitext(filename)[0])
+            print('filebase:', filebase)
+            eventname = filebase
+            events[eventname] = {}
+            events[eventname]['file'] = filename
+            if filename.find('asl') != -1:
+                # pcasl file
+                if filename.split('_')[3] == '1':
+                    events[eventname]['type'] = 'pcasl1'
+                else:
+                    events[eventname]['type'] = 'pcasl2'
+            elif filename.find('block') != -1:
+                # block file
+                events[eventname]['type'] = 'block'
+            elif filename.find('rest') != -1:
+                # rest file
+                events[eventname]['type'] = 'rest'
+            elif filename.find('breath') != -1:
+                # breath file
+                events[eventname]['type'] = 'breath'
+            else:
+                pass
+            with open(events[eventname]['file'], 'r') as fp:
+                events[eventname]['starttimestr'] = fp.readlines()[0]
+            timestruct = time.strptime(events[eventname]['starttimestr'][0:16], "%Y-%m-%dT%H:%M")
+            integerseconds = time.mktime(timestruct)
+            #integerseconds = time.mktime(time.strptime(events[eventname]['starttimestr'][0:16], "%Y-%m-%dT%H:%M"))
+            events[eventname]['starttimesec'] = 1.0 * integerseconds + float(events[eventname]['starttimestr'][17:])
+            if events[eventname]['starttimesec'] < firsttime:
+                firsttime = events[eventname]['starttimesec']
+            #print(events[eventname])
+    print('first scan starts at', firsttime)
+    print()
+
+    # construct the probe regressor
+    print('constructing probe regressor')
+    probetc = 0.0 * triggerwaveform
+    for key, val in enumerate(events):
+        events[val]['relstarttime'] = events[val]['starttimesec'] - firsttime
+        if events[val]['type'] == 'block':
+            print('adding block train at', events[val]['relstarttime'])
+            genpulses(probetc, upsampletime, blocktrs, tr, 0.050, events[val]['relstarttime'] + initoffset)
+        if events[val]['type'] == 'breath':
+            print('adding breath train at', events[val]['relstarttime'])
+            genpulses(probetc, upsampletime, breathtrs, tr, 0.050, events[val]['relstarttime'] + initoffset)
+        if events[val]['type'] == 'rest':
+            print('adding rest train at', events[val]['relstarttime'])
+            genpulses(probetc, upsampletime, resttrs, tr, 0.050, events[val]['relstarttime'] + initoffset)
+        print(val, events[val]['type'], events[val]['relstarttime'])
+
+    if optimize:
+        print('optimizing delay')
+        thedelay = finddelay(triggerwaveform, probetc, upsampletime) - initoffset
+    else:
+        print('not optimizing delay')
+        thedelay = initoffset
+    print('delay value to first scan is', thedelay)
+    print()
+
+    probetc = 0.0 * triggerwaveform
+    scanningstart = 1000000000.0
+    scanningend = -10000000.0
+    for key, val in enumerate(events):
+        events[val]['absstarttime'] = events[val]['relstarttime'] + thedelay
+        if events[val]['type'] == 'pcasl1':
+            genpulses(probetc, upsampletime, 1, 0.0, pcasl1time, events[val]['absstarttime'])
+            events[val]['absendtime'] = events[val]['absstarttime'] + pcasl1time
+        if events[val]['type'] == 'pcasl2':
+            genpulses(probetc, upsampletime, 1, 0.0, pcasl2time, events[val]['absstarttime'])
+            events[val]['absendtime'] = events[val]['absstarttime'] + pcasl2time
+        if events[val]['type'] == 'block':
+            genpulses(probetc, upsampletime, blocktrs, tr, 0.050, events[val]['absstarttime'])
+            events[val]['absendtime'] = events[val]['absstarttime'] + blocktrs * tr
+        if events[val]['type'] == 'breath':
+            events[val]['absendtime'] = events[val]['absstarttime'] + breathtrs * tr
+            genpulses(probetc, upsampletime, breathtrs, tr, 0.050, events[val]['absstarttime'])
+        if events[val]['type'] == 'rest':
+            genpulses(probetc, upsampletime, resttrs, tr, 0.050, events[val]['absstarttime'])
+            events[val]['absendtime'] = events[val]['absstarttime'] + resttrs * tr
+        if events[val]['absstarttime'] < scanningstart:
+            scanningstart = events[val]['absstarttime']
+        if events[val]['absendtime'] > scanningend:
+            scanningend = events[val]['absendtime']
+
+    with open(os.path.join(physiopath, subjnum + '_biopac_runsummaries.txt'), 'w') as fp:
+        fp.writelines('O2\n')
+        fp.writelines('\traw_scale_factor:  ' + str(channeldict[u'O2']['raw_scale_factor']) + '\n')
+        fp.writelines('\traw_offset:        ' + str(channeldict[u'O2']['raw_offset']) + '\n')
+        fp.writelines('CO2\n')
+        fp.writelines('\traw_scale_factor:  ' + str(channeldict[u'CO2']['raw_scale_factor']) + '\n')
+        fp.writelines('\traw_offset:        ' + str(channeldict[u'CO2']['raw_offset']) + '\n')
+        fp.writelines('\n')
+        for key, val in enumerate(events):
+            if respexists:
+                o2mean, o2std, co2mean, co2std = writewaves(val, events[val]['absstarttime'], events[val]['absendtime'], upsampletime, physiopath,
+                    channeldict[u'O2']['upsampled_timeaxis'][0:safelength],
+                    channeldict[u'O2']['upsampled_waveform'][0:safelength],
+                    channeldict[u'CO2']['upsampled_waveform'][0:safelength],
+                    resp=channeldict[u'Respiratory Belt - TSD160A - Differenti']['upsampled_waveform'][0:safelength])
+            else:
+                o2mean, o2std, co2mean, co2std = writewaves(val, events[val]['absstarttime'], events[val]['absendtime'], upsampletime, physiopath,
+                    channeldict[u'O2']['upsampled_timeaxis'][0:safelength],
+                    channeldict[u'O2']['upsampled_waveform'][0:safelength],
+                    channeldict[u'CO2']['upsampled_waveform'][0:safelength])
+            fp.writelines(val + ' o2: ' + str(o2mean) + ' +/- ' + str(o2std) + ' co2: ' + str(co2mean) + ' +/- ' + str(co2std) + '\n')
+
+        
+
+cols = []
+d = {}
+d['Time'] = channeldict[u'O2']['upsampled_timeaxis'][0:safelength]
+cols.append('Time')
+
+searchchannels = [u'O2', u'CO2']
+mintimes = [channeldict[u'O2']['upsampled_timeaxis'][0], channeldict[u'CO2']['upsampled_timeaxis'][0]]
+maxtimes = [channeldict[u'O2']['upsampled_timeaxis'][-1], channeldict[u'CO2']['upsampled_timeaxis'][-1]]
+for thechan in searchchannels:
+    d[channeldict[thechan]['name']] = channeldict[thechan]['upsampled_waveform'][0:safelength]
+    cols.append(channeldict[thechan]['name'])
+mintimes.append(triggeraxis[0])
+maxtimes.append(triggeraxis[-1])
+d[u'Trigger'] = triggerwaveform[0:safelength]
+cols.append(u'Trigger')
+if respexists:
+    mintimes.append(channeldict[u'Respiratory Belt - TSD160A - Differenti']['upsampled_timeaxis'][0])
+    maxtimes.append(channeldict[u'Respiratory Belt - TSD160A - Differenti']['upsampled_timeaxis'][-1])
+    d[u'Respiration'] = channeldict[u'Respiratory Belt - TSD160A - Differenti']['upsampled_waveform'][0:safelength]
+    cols.append(u'Respiration')
+
+print(cols)
+
+df = pd.DataFrame(data=d)
+df = df[cols]
+if args[1][-3:] == 'csv':
+    df.to_csv(args[1], sep=',', index=False)
+else:
+    df.to_csv(args[1], sep='\t', index=False)
+
+numplots = 3
+if respexists:
+    numplots += 1
+
+if display:
+        thestdwidth = 0.33
+        dispmin = np.min(mintimes)
+        dispmax = np.max(maxtimes)
+        dispoffset = 0.0
+        padvalue = 30.0
+        if trim:
+            dispoffset = -scanningstart
+            dispmin = -padvalue
+            dispmax = scanningend + padvalue
+        fig = plt.figure()
+        ax_o2 = fig.add_subplot(str(numplots) + '11')
+        ax_o2.set_title('O2 concentration (%)')
+        ax_o2.set_xlim([dispmin, dispmax])
+        ax_o2.set_ylim([0, 100.0])
+        plt.plot(channeldict[u'O2']['upsampled_timeaxis'] + dispoffset, channeldict[u'O2']['upsampled_waveform'], 'b', linewidth=thestdwidth)
+        ax_co2 = fig.add_subplot(str(numplots) + '12')
+        ax_co2.set_title('CO2 concentration (%)')
+        ax_co2.set_xlim([dispmin, dispmax])
+        ax_co2.set_ylim([0, 7.0])
+        plt.plot(channeldict[u'CO2']['upsampled_timeaxis'] + dispoffset, channeldict[u'CO2']['upsampled_waveform'], 'g', linewidth=thestdwidth)
+        numextra = 0
+        if respexists:
+            numextra += 1
+            ax_resp = fig.add_subplot(str(numplots) + '1' + str(2 + numextra))
+            ax_resp.set_title('Respiration')
+            ax_resp.set_xlim([dispmin, dispmax])
+            plt.plot(channeldict[u'Respiratory Belt - TSD160A - Differenti']['upsampled_timeaxis'] + dispoffset, channeldict[u'Respiratory Belt - TSD160A - Differenti']['upsampled_waveform'], 'k', linewidth=thestdwidth)
+        numextra += 1
+        ax_trig = fig.add_subplot(str(numplots) + '1' + str(2 + numextra))
+        ax_trig.set_title('Scanner trigger')
+        ax_trig.set_xlim([dispmin, dispmax])
+        ax_trig.set_ylim([0, 5.2])
+        if imtimes:
+            plt.plot(triggeraxis + dispoffset, triggerwaveform, 'k', triggeraxis + dispoffset, probetc, 'r', linewidth=thestdwidth)
+        else:
+            plt.plot(triggeraxis + dispoffset, triggerwaveform, 'k', linewidth=thestdwidth)
+        plt.subplots_adjust(hspace=0.5)
+        plt.savefig(os.path.join(physiopath, subjnum + '_biopac_plot.pdf'), bbox_inches='tight')
+        plt.show()

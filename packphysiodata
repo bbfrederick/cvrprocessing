@@ -1,0 +1,3 @@
+#!/bin/csh -f
+
+tar -cvzf physiofiles.tgz ../sub*/func/*physio*

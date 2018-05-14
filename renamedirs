@@ -1,0 +1,33 @@
+#!/bin/csh -f
+
+#######
+# input 1 is the subject directory, ex. 'sub-01'
+#
+#
+
+set subj=$1
+echo 'subject is '$subj
+
+foreach run ( 'MEMPRAGE_gr2_RMS' 'tof_fl3d_tra_p2' 'MPCASL3DCO_1' 'MPCASL3DCO_2' 'MPCASL3DMA_1' 'MPCASL3DMA_2' 'MPCASL3DO2_1' 'MPCASL3DO2_2' )
+    if ( -e ../$subj/dicomdir/$run'_'* ) then
+        set srcname = `'ls' -1d ../$subj/dicomdir/$run'_'*[0-9] | tail -n 1`
+        echo $srcname ../$subj/dicomdir/$run
+    else
+        echo 'no files matching ' ../$subj/dicomdir/$run
+        endif
+    end
+
+#foreach run ( 'BOLD_AIR_RESTING' 'BOLD_CO_RESTING' 'BOLD_O2_RESTING' 'BOLD_AIR_breathhold' 'BOLD_CO_BLOCK' 'BOLD_O2_BLOCK' )
+#    if ( -e ../$subj/dicomdir/$run'_'*[0-9] ) then
+#        set srcname = `'ls' -1d ../$subj/dicomdir/$run'_'*[0-9] | tail -n 1`
+#        mv $srcname ../$subj/dicomdir/$run'_phase'
+#    else
+#        echo 'no files matching ' ../$subj/dicomdir/$run
+#        endif
+#    if ( -e ../$subj/dicomdir/$run'_'*[0-9] ) then
+##        set srcname = `'ls' -1d ../$subj/dicomdir/$run'_'*[0-9] | tail -n 1`
+#        mv $srcname ../$subj/dicomdir/$run'_mag'
+#    else
+#        echo 'no files matching ' ../$subj/dicomdir/$run
+#        endif
+#    end

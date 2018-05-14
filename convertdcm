@@ -1,0 +1,37 @@
+#!/bin/csh -f
+
+set subj=$1
+set dirlist=`ls -1d ../$subj/dicomdir/* | sed 's/\// /g' | awk '{print $4}'`
+
+mkdir -p ../$subj/anat
+mkdir -p ../$subj/func
+
+foreach run (   'MEMPRAGE_gr2_RMS          anat T1w' \
+                'tof_fl3d_tra_p2           anat 3dtof' \
+                'BOLD_AIR_RESTING_mag      func resting_air_mag_bold' \
+                'BOLD_AIR_RESTING_phase    func resting_air_phase_bold' \
+                'BOLD_CO_RESTING_mag       func resting_carbogen_mag_bold' \
+                'BOLD_CO_RESTING_phase     func resting_carbogen_phase_bold' \
+                'BOLD_O2_RESTING_mag       func resting_O2_mag_bold' \
+                'BOLD_O2_RESTING_phase     func resting_O2_phase_bold' \
+                'BOLD_AIR_breathhold_mag   func breathhold_air_mag_bold' \
+                'BOLD_AIR_breathhold_phase func breathhold_air_phase_bold' \
+                'BOLD_CO_BLOCK_mag         func block_carbogen_mag_bold' \
+                'BOLD_CO_BLOCK_phase       func block_carbogen_phase_bold' \
+                'BOLD_O2_BLOCK_mag         func block_O2_mag_bold' \
+                'BOLD_O2_BLOCK_phase       func block_O2_phase_bold' \
+                'MPCASL3DCO_1              func carbogen_run-01_pcasl' \
+                'MPCASL3DCO_2              func carbogen_run-02_pcasl' \
+                'MPCASL3DMA_1              func air_run-01_pcasl' \
+                'MPCASL3DMA_2              func air_run-02_pcasl' \
+                'MPCASL3DO2_1              func O2_run-01_pcasl' \
+                'MPCASL3DO2_2              func O2_run-02_pcasl' )
+    set runname=`echo $run | awk '{print $1}'`
+    set desttype=`echo $run | awk '{print $2}'`
+    set destname=`echo $run | awk '{print $3}'`
+
+    rm ../$subj/dicomdir/$runname/*.nii.gz ../$subj/dicomdir/$runname/*.json
+    dcm2niix -b -o -z i -f %f_converted ../$subj/dicomdir/$runname
+    mv ../$subj/dicomdir/$runname/*.nii.gz ../$subj/$desttype/$subj'_'$destname'.nii.gz'
+    mv ../$subj/dicomdir/$runname/*.json ../$subj/$desttype/$subj'_'$destname'.json'
+    end

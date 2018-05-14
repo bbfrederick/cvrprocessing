@@ -1,0 +1,20 @@
+readnirs ../sub-01/physio/CVR_01_pleth_recon_alldata.txt ../sub-01/physio/sub-01_recording-nirsall_physio.txt --imtimes --initoffset=68.375 --noopt --noshow
+#readnirs ../sub-02/physio/CVR_02a_pleth_recon_alldata.txt ../sub-02/physio/sub-02a_recording-nirsall_physio.txt --imtimes no trigger?
+#readnirs ../sub-02/physio/CVR_02b_pleth_recon_alldata.txt ../sub-02/physio/sub-02b_recording-nirsall_physio.txt --imtimes no trigger?
+readnirs ../sub-04/physio/CVR_04_pleth_recon_alldata.txt ../sub-04/physio/sub-04_recording-nirsall_physio.txt --imtimes --initoffset=49.72 --noopt --noshow
+readnirs ../sub-05/physio/CVR_05_pleth_recon_alldata.txt ../sub-05/physio/sub-05_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-06/physio/CVR_06_pleth_recon_alldata.txt ../sub-06/physio/sub-06_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-07/physio/CVR_07_pleth_recon_alldata.txt ../sub-07/physio/sub-07_recording-nirsall_physio.txt --imtimes --noshow
+#readnirs ../sub-08/physio/CVR_08_pleth_recon_alldata.txt ../sub-08/physio/sub-08_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-08/physio/CVR_08b_pleth_recon_alldata.txt ../sub-08/physio/sub-08b_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-12/physio/CVR_12_pleth_recon_alldata.txt ../sub-12/physio/sub-12_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-13/physio/CVR_13_pleth_recon_alldata.txt ../sub-13/physio/sub-13_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-14/physio/CVR_14_pleth_recon_alldata.txt ../sub-14/physio/sub-14_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-16/physio/CVR_16_pleth_recon_alldata.txt ../sub-16/physio/sub-16_recording-nirsall_physio.txt --imtimes --initoffset=51.6 --noopt --noshow
+readnirs ../sub-17/physio/CVR_17_pleth_recon_alldata.txt ../sub-17/physio/sub-17_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-18/physio/CVR_18_pleth_recon_alldata.txt ../sub-18/physio/sub-18_recording-nirsall_physio.txt --imtimes --initoffset=20.0 --noopt --noshow
+readnirs ../sub-20/physio/CVR_20_pleth_recon_alldata.txt ../sub-20/physio/sub-20_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-21/physio/CVR_21_pleth_recon_alldata.txt ../sub-21/physio/sub-21_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-24/physio/CVR_24_pleth_recon_alldata.txt ../sub-24/physio/sub-24_recording-nirsall_physio.txt --imtimes --noshow
+readnirs ../sub-25/physio/CVR_25_pleth_recon_alldata.txt ../sub-25/physio/sub-25_recording-nirsall_physio.txt --imtimes --initoffset=131.4 --noopt --noshow
+readnirs ../sub-26/physio/CVR_26_pleth_recon_alldata.txt ../sub-26/physio/sub-26_recording-nirsall_physio.txt --imtimes --noshow

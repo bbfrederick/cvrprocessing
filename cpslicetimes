@@ -1,0 +1,6 @@
+cp ../cvr_test_002/mr_nifti/BOLD_CO_mb/slicetimes.txt ../cvr_test_003/mr_nifti/BOLD_CO
+cp ../cvr_test_002/mr_nifti/BOLD_CO_RESTING_mb/slicetimes.txt ../cvr_test_003/mr_nifti/BOLD_CO_RESTING
+cp ../cvr_test_002/mr_nifti/BOLD_MA_breathhold_mb/slicetimes.txt ../cvr_test_003/mr_nifti/BOLD_AIR_breathhold
+cp ../cvr_test_002/mr_nifti/BOLD_MA_RESTING_mb/slicetimes.txt ../cvr_test_003/mr_nifti/BOLD_AIR_RESTING
+cp ../cvr_test_002/mr_nifti/BOLD_O2_mb/slicetimes.txt ../cvr_test_003/mr_nifti/BOLD_O2
+cp ../cvr_test_002/mr_nifti/BOLD_O2_RESTING_mb/slicetimes.txt ../cvr_test_003/mr_nifti/BOLD_O2_RESTING

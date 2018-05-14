@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import csv
+import glob
+import numpy as np
+import sys
+import os
+from os.path import join as pjoin
+import subprocess
+import pandas as pd
+
+def usage():
+    print("")
+    print("step20_cvtdcmtonii - convert dicoms to nifti")
+    print("")
+    print("    usage:  step20_cvtdcmtonii subjectdirectory")
+    print("")
+
+            
+def convertdicoms(subjectdir, dicomsubdir, niftisubdir, niftiname):
+    sourcedir = pjoin(subjectdir, 'sourcedata', dicomsubdir)
+    if os.path.isdir(sourcedir):
+        destdir = pjoin(subjectdir, niftisubdir)
+        try:
+            os.makedirs(destdir)
+        except OSError:
+            pass
+        try:
+            os.remove(niftiname + '.nii.gz')
+        except:
+            pass
+        try:
+            os.remove(niftiname + '.json')
+        except:
+            pass
+        print(sourcedir, destdir, niftiname)
+        dcm2niicmd = ['dcm2niix', '-b', '-z', 'y', '-f', niftiname , '-o', destdir, sourcedir]
+        subprocess.call(dcm2niicmd)
+    else:
+        print(sourcedir, 'does not exist - skipping')
+
+
+def main():
+    args = sys.argv[1:]
+    if len(args) != 1:
+        print('step20_cvtdcmtonii requires the path to a subject directory')
+        usage()
+        exit()
+
+    # determine which files are there to be analyzed
+    subjectdir = args[0]
+    thepath, thesubject = os.path.split(subjectdir)
+    print(thepath, thesubject)
+
+    anatscans = [['MEMPRAGE_gr2_RMS', 'T1w'],
+                ['PC_3D_30_30_30', 'acq-PC30_angio'],
+                ['tof_fl3d_tra_p2', 'acq-tof_angio']]
+    for thescan in anatscans:
+        convertdicoms(subjectdir, thescan[0], 'anat', thesubject + '_' + thescan[1])
+
+    aslscans = [['MPCASL3DCO_1', 'task-carbogen_acq-pcasl1_asl'],
+                ['MPCASL3DCO_2', 'task-carbogen_acq-pcasl2_asl'],
+                ['MPCASL3DMA_1', 'task-air_acq-pcasl1_asl'],
+                ['MPCASL3DMA_2', 'task-air_acq-pcasl2_asl'],
+                ['MPCASL3DO2_1', 'task-O2_acq-pcasl1_asl'],
+                ['MPCASL3DO2_2', 'task-O2_acq-pcasl2_asl']]
+    for thescan in aslscans:
+        convertdicoms(subjectdir, thescan[0], 'func', thesubject + '_' + thescan[1])
+
+    fmriscans = [['BOLD_AIR_RESTING', 'task-rest_acq-air'],
+                ['BOLD_CO_RESTING', 'task-rest_acq-carbogen'],
+                ['BOLD_O2_RESTING', 'task-rest_acq-O2'],
+                ['BOLD_AIR_breathhold', 'task-breathhold_acq-air'],
+                ['BOLD_CO_BLOCK', 'task-block_acq-carbogen'],
+                ['BOLD_O2_BLOCK', 'task-block_acq-O2']]
+    for thescan in fmriscans:
+        convertdicoms(subjectdir, thescan[0] + '_mag', 'func', thesubject + '_' + thescan[1] + '_rec-mag_bold')
+        convertdicoms(subjectdir, thescan[0] + '_phase', 'func', thesubject + '_' + thescan[1] + '_rec-phase_bold')
+
+    
+if __name__ == "__main__":
+    main()

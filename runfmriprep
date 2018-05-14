@@ -1,0 +1,14 @@
+#!/bin/csh -f
+
+fmriprep-docker \
+    /Users/frederic/Documents/MR_data/CVRinHnD \
+    /Users/frederic/Documents/MR_data/CVRinHnD/derivatives \
+    participant \
+    --fs-license-file /Applications/freesurfer/.license \
+    --n_cpus 1 \
+    --low-mem \
+    --verbose \
+    --use-aroma \
+    --use-syn-sdc \
+    --participant_label 19
+    

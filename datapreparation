@@ -1,0 +1,18 @@
+Step 1:
+    Load data into Osirix/Horos from the research server
+
+Step 2:
+    Export data to destination directory.  Do heirarchical export, decompress all dicoms.
+
+Step 3:
+    Rename output directory to sub-XX/dicomdir
+
+Step 4:
+    Rename dicom subdirectories by removing trailing numbers and separating magnitude and phase functional scans by running:
+
+    step10_renamedicomdirs sub-XX
+
+Step 5:
+    Convert DICOMs to NIFTI by running:
+
+    step20_cvtdcmtonii sub-XX

@@ -1,0 +1,37 @@
+#!/bin/csh -f
+
+foreach subj ( sub-03 )
+    mkdir -p ../$subj/anat
+    mkdir -p ../$subj/func
+    foreach run ( 'MEMPRAGE_gr2_RMS anat/XXXXX_T1w' \
+                    'BOLD_AIR_RESTING func/XXXXX_resting_air_YYYYY_bold' \
+                    'BOLD_AIR_breathhold func/XXXXX_breathhold_air_YYYYY_bold' \
+                    'BOLD_CO_BLOCK func/XXXXX_block_carbogen_YYYYY_bold' \
+                    'BOLD_CO_RESTING func/XXXXX_resting_carbogen_YYYYY_bold' \
+                    'BOLD_O2_BLOCK func/XXXXX_block_O2_YYYYY_bold' \
+                    'BOLD_O2_RESTING func/XXXXX_resting_O2_YYYYY_bold' \
+                    'MPCASL3DCO_1 func/XXXXX_carbogen_run-01_pcasl' \
+                    'MPCASL3DCO_2 func/XXXXX_carbogen_run-02_pcasl' \
+                    'MPCASL3DMA_1 func/XXXXX_air_run-01_pcasl' \
+                    'MPCASL3DMA_2 func/XXXXX_air_run-02_pcasl' \
+                    'MPCASL3DO2_1 func/XXXXX_O2_run-01_pcasl' \
+                    'MPCASL3DO2_2 func/XXXXX_O2_run-02_pcasl' )
+        set dcmname=`echo $run | awk '{print $1}'`
+        set niftimagname=../$subj'/'`echo $run | awk '{print $2}' | sed 's/XXXXX/'$subj'/g' | sed 's/YYYYY/mag/g'`
+        set niftiphasename=../$subj'/'`echo $run | awk '{print $2}' | sed 's/XXXXX/'$subj'/g' | sed 's/YYYYY/phase/g'`
+        dcm2niix -b -o -z i -f %f_converted ../$subj/dicomdir/$dcmname
+        if ( -e ../$subj/dicomdir/$dcmname/$dcmname'_converteda.nii.gz' ) then
+            mv ../$subj/dicomdir/$dcmname/$dcmname'_converteda.nii.gz' $niftimagname'.nii.gz'
+            mv ../$subj/dicomdir/$dcmname/$dcmname'_converteda.json' $niftimagname'.json'
+            mv ../$subj/dicomdir/$dcmname/$dcmname'_converted.nii.gz' $niftiphasename'.nii.gz'
+            mv ../$subj/dicomdir/$dcmname/$dcmname'_converted.json' $niftiphasename'.json'
+            set dcmslicefile = `ls -1 ../sub-03/dicomdir/BOLD_CO_BLOCK/*dcm | tail -n 1`
+            getslicetimes $dcmslicefile > $niftimagname'_slicetimes.txt'
+            cp $niftimagname'_slicetimes.txt' $niftiphasename'_slicetimes.txt'
+        else
+            mv ../$subj/dicomdir/$dcmname/$dcmname'_converted.nii.gz' $niftimagname'.nii.gz'
+            mv ../$subj/dicomdir/$dcmname/$dcmname'_converted.json' $niftimagname'.json'
+            echo 'path 2'
+        endif 
+        end
+    end

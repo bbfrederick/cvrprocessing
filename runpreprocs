@@ -1,0 +1,7 @@
+#!/bin/csh -f
+fsl_sub /usr/local/fsl/feat /Users/frederic/Documents/MR_data/CVRinHnD/analysis/preprocfsfs/sub-02_block_O2_mag_bold_preproc.fsf
+fsl_sub /usr/local/fsl/feat /Users/frederic/Documents/MR_data/CVRinHnD/analysis/preprocfsfs/sub-02_block_carbogen_mag_bold_preproc.fsf
+fsl_sub /usr/local/fsl/feat /Users/frederic/Documents/MR_data/CVRinHnD/analysis/preprocfsfs/sub-02_breathhold_air_mag_bold_preproc.fsf
+fsl_sub /usr/local/fsl/feat /Users/frederic/Documents/MR_data/CVRinHnD/analysis/preprocfsfs/sub-02_resting_O2_mag_bold_preproc.fsf
+fsl_sub /usr/local/fsl/feat /Users/frederic/Documents/MR_data/CVRinHnD/analysis/preprocfsfs/sub-02_resting_air_mag_bold_preproc.fsf
+fsl_sub /usr/local/fsl/feat /Users/frederic/Documents/MR_data/CVRinHnD/analysis/preprocfsfs/sub-02_resting_carbogen_mag_bold_preproc.fsf
