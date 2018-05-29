@@ -30,7 +30,7 @@ set fmri(featwatcher_yn) 1
 set fmri(sscleanup_yn) 0
 
 # Output directory
-set fmri(outputdir) "YYYYY"
+set fmri(outputdir) "TARGETDIR/TARGETFEAT"
 
 # TR(s)
 set fmri(tr) TTTTT
@@ -85,7 +85,7 @@ set fmri(gdc) ""
 set fmri(dwell) 0.7
 
 # EPI TE (ms)
-set fmri(te) 35
+set fmri(te) ECHOTIME
 
 # % Signal loss threshold
 set fmri(signallossthresh) 10
@@ -103,13 +103,13 @@ set fmri(unwarp_dir) y-
 set fmri(st) 4
 
 # Slice timings file
-set fmri(st_file) "PPPPP/func/SCSCSC_slicetimes.txt"
+set fmri(st_file) "SLICETIMESFILE"
 
 # BET brain extraction
 set fmri(bet_yn) 1
 
 # Spatial smoothing FWHM (mm)
-set fmri(smooth) 3
+set fmri(smooth) SPSMOOTH
 
 # Intensity normalization
 set fmri(norm_yn) 0
@@ -118,7 +118,7 @@ set fmri(norm_yn) 0
 set fmri(perfsub_yn) 0
 
 # Highpass temporal filtering
-set fmri(temphp_yn) 0
+set fmri(temphp_yn) HPFILTYN
 
 # Lowpass temporal filtering
 set fmri(templp_yn) 0
@@ -127,7 +127,7 @@ set fmri(templp_yn) 0
 set fmri(melodic_yn) 0
 
 # Carry out main stats?
-set fmri(stats_yn) STSTST
+set fmri(stats_yn) DOSTATSYN
 
 # Carry out prewhitening?
 set fmri(prewhiten_yn) 1
@@ -273,13 +273,13 @@ set fmri(totalVoxels) 410572800
 set fmri(ncopeinputs) 0
 
 # 4D AVW data or FEAT directory (1)
-set feat_files(1) "PPPPP/func/SCSCSC"
+set feat_files(1) "FUNCFILE"
 
 # Add confound EVs text file
 set fmri(confoundevs) 0
 
 # Subject's structural image for analysis 1
-set highres_files(1) "PPPPP/anat/SSSSS_T1w_brain"
+set highres_files(1) "ANATFILE"
 
 # EV 1 title
 set fmri(evtitle1) ""

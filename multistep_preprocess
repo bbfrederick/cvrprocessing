@@ -1,0 +1,436 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import glob
+import sys
+import os
+from os.path import join as pjoin
+import subprocess
+import re
+import shutil
+from tempfile import mkstemp
+import getopt
+import rapidtide.tide_funcs as tide
+import numpy as np
+
+
+
+def usage(processingtype):
+    print("")
+    if processingtype == "dorapidtide":
+        progname = "step40_dorapidtides"
+        print(progname, "- run FSL preprocessing on the datasets")
+    elif processingtype == "reg2std":
+        progname = "step50_reg2std"
+        print(progname, "- register all rapidtide output maps to standard coordinates")
+    print("")
+    print("    usage:  ", progname, "[--fake] [--inputlist=INPUTFILE")
+    print("")
+    print("    optional arguments:")
+    print("        --fake                  print out commands rather than executing them")
+    print("        --inputlist=INPUTFILE   only process the subjects listed in INPUTFILE (one per line)")
+
+
+def readlist(inputfilename):
+    inputlist = []
+    with open(inputfilename, 'rU') as thefile:
+        lines = thefile.readlines()
+        for line in lines:
+            inputlist.append(line.rstrip())
+    return inputlist
+
+
+def getniftiheader(inputfile):
+    hdrdict = {}
+    fslhdcmd = [os.path.join(os.getenv('FSLDIR'), 'bin', 'fslhd'), inputfile]
+    for theline in subprocess.check_output(fslhdcmd).decode('utf8').split('\n'):
+        if theline is not '':
+            linestuff = theline.split()
+            thekey = linestuff[0]
+            theval = ' '.join(linestuff[1:])
+            hdrdict[thekey] = theval
+    return hdrdict
+
+
+def sed(pattern, replace, source, dest=None, count=0):
+    """Reads a source file and writes the destination file.
+
+    In each line, replaces pattern with replace.
+
+    Args:
+        pattern (str): pattern to match (can be re.pattern)
+        replace (str): replacement str
+        source  (str): input filename
+        count (int): number of occurrences to replace
+        dest (str):   destination filename, if not given, source will be over written.        
+    """
+
+    with open(source, 'r') as fin:
+        num_replaced = count
+
+        if dest:
+            outname = dest
+        else:
+            fd, name = mkstemp()
+            outname = name
+    
+        with open(outname, 'w') as fout:
+            for line in fin:
+                out = re.sub(pattern, replace, line)
+                fout.write(out)
+        
+                if out != line:
+                    num_replaced += 1
+                if count and num_replaced > count:
+                    break
+            try:
+                fout.writelines(fin.readlines())
+            except Exception as E:
+                raise E
+    
+    if not dest:
+        shutil.move(name, source) 
+
+
+def getautobetinputs(rootdir, inputlist):
+    if inputlist is None:
+        anatnames = sorted(glob.glob(pjoin(rootdir, '*', '*', 'mprage.nii.gz')))
+    else:
+        anatnames = []
+        for thedir in inputlist:
+            anatnames.append(glob.glob(pjoin(rootdir, '*', thedir, 'mprage.nii.gz'))[0])
+    return anatnames
+
+
+def getcheckbetinputs(rootdir, inputlist):
+    if inputlist is None:
+        anatnames = sorted(glob.glob(pjoin(rootdir, '*',  '*', 'mprage_brain.nii.gz')))
+    else:
+        anatnames = []
+        for thedir in inputlist:
+            anatnames.append(glob.glob(pjoin(rootdir, '*', thedir, 'mprage_brain.nii.gz'))[0])
+    return anatnames
+
+
+def getrunfeatinputs(rootdir, inputlist, debug=False):
+    if inputlist is None:
+        searchpath = pjoin(rootdir, '*', 'func', '*_rec-mag_bold.nii.gz')
+        if debug:
+            print('searchpath is', searchpath)
+        boldnames = sorted(glob.glob(searchpath))
+    else:
+        boldnames = []
+        for thedir in inputlist:
+            searchpath = pjoin(rootdir, thedir, 'func', '_rec-mag_bold.nii.gz')
+            if debug:
+                print('searchpath is', searchpath)
+            boldnames.append(glob.glob(searchpath)[0])
+    return boldnames
+
+
+def getaromainputs(rootdir, inputlist):
+    if inputlist is None:
+        fmrinames = sorted(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-*.feat', 'filtered_func_data.nii.gz')))
+    else:
+        fmrinames = []
+        for thedir in inputlist:
+            fmrinames.append(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-' + thedir + '.feat', 'filtered_func_data.nii.gz'))[0])
+    return fmrinames
+
+
+def getrapidtideinputs(rootdir, inputlist):
+    if inputlist is None:
+        print('no input list specified - looking for all files')
+        fmrinames = sorted(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-*.feat', 'ICA_AROMA', 'denoised_func_data_nonaggr.nii.gz')))
+    else:
+        print('limiting to inputfiles')
+        fmrinames = []
+        for thedir in inputlist:
+            fmrinames.append(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-' + thedir + '.feat', 'ICA_AROMA', 'denoised_func_data_nonaggr.nii.gz'))[0])
+    return fmrinames
+
+
+def getreg2stdinputs(rootdir, outputdir, inputlist, debug=False):
+    if inputlist is None:
+        print('no input list specified - looking for all files')
+        fmrinames = sorted(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-*.feat', 'ICA_AROMA', 'denoised_func_data_nonaggr.nii.gz')))
+    else:
+        print('limiting to inputfiles')
+        fmrinames = []
+        for thedir in inputlist:
+            fmrinames.append(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-' + thedir + '.feat', 'ICA_AROMA', 'denoised_func_data_nonaggr.nii.gz'))[0])
+    existingfiles = []
+    if debug:
+        print('getreg2stdinputs:', fmrinames)
+    for thisname in fmrinames:
+        procpath = os.path.dirname(os.path.dirname(thisname))
+        temp, scandir = os.path.split(procpath)
+        scandir = os.path.splitext(scandir)[0]
+        subject = scandir.replace('.feat', '')
+        thisname = os.path.join(outputdir, subject)
+        if debug:
+            print(scandir, subject, thisname)
+        if os.path.isfile(thisname + '_runtimings.txt'):
+             existingfiles.append(thisname)
+    if debug:
+        print(existingfiles)
+    return existingfiles 
+
+
+def makearomacommand(theinputfile, fake):
+    # get the important components of the path
+    funcdir, fmrifile = os.path.split(theinputfile)
+    targetdir = os.path.join(funcdir, 'ICA_AROMA')
+
+    # remove any previous run directory
+    if not fake:
+        try:
+            shutil.rmtree(targetdir)
+        except Exception as E:
+            pass
+
+    # and launch the processing
+    aromacmd = ['fsl_sub', os.path.join('/cm/shared/ICA-AROMA', 'ICA_AROMA.py'), '-f', funcdir, '-o', targetdir]
+    return aromacmd
+
+ 
+def makefeatcommand(rootdir, theinputfile, fake, debug=False):
+    # get the important components of the path
+    funcdir, filename = os.path.split(theinputfile)
+    fileparts = filename.split('_')
+    print(fileparts)
+    subject = fileparts[0]
+    scanname = fileparts[1] + '_' + fileparts[2]
+    targetdir = os.path.join(rootdir, 'derivatives', 'fsl', subject)
+    theanatscan = os.path.join(rootdir, 'derivatives', 'fmriprep', subject, 'anat', subject + '_T1w_preproc_brain.nii.gz')
+
+    # create targetdir if it doesn't exist
+    try:
+        os.makedirs(targetdir)
+    except OSError:
+        pass
+
+    targetroot = subject + '_' + scanname + '_preprocess'
+    destfsf = os.path.join(targetdir, targetroot + '.fsf')
+
+    # make a slicetimes file
+    infodict = tide.readbidssidecar(theinputfile.replace('.nii.gz', '.json'))
+    try:
+        slicetimelist = infodict['SliceTiming']
+        echotime = str(np.round(float(infodict['EchoTime']) * 1000.0, 0))
+        slicetimes = np.zeros((len(slicetimelist)), dtype=np.float64)
+        for idx, thetime in enumerate(slicetimelist):
+            slicetimes[idx] = float(thetime)
+        slicetimefilename = os.path.join(targetdir, subject + '_' + scanname + '_slicetimes.txt')
+        print(slicetimefilename)
+        tide.writevec(slicetimes, slicetimefilename)
+    except KeyError:
+        print(theinputfile.replace('.nii.gz', '.json'), 'is not a valid BIDS sidecar file')
+        sys.exit()
+
+    # now make a .fsf file
+    hdrinfo = getniftiheader(theinputfile)
+    tr = hdrinfo['pixdim4']
+    npts = hdrinfo['dim4']
+    thewarpres = '10'
+    spsmooth = '3'
+
+    srcfsf = 'BOLD_preproc_template.fsf'
+    if scanname.find('task-rest') > -1:
+        dostats = '0'
+        dohpfilt = '1'
+        regressorfile = ''
+    elif scanname.find('task-breathhold') > -1:
+        dostats = '1'
+        dohpfilt = '1'
+        regressorfile = os.path.join(rootdir, 'analysis', 'breathhold.txt')
+    elif scanname.find('task-block') > -1:
+        dostats = '1'
+        dohpfilt = '0'
+        regressorfile = os.path.join(rootdir, 'analysis', 'gas.txt')
+    else:
+        print('unknown functional file type')
+        sys.exit()
+    sed('SCSCSC', theinputfile, srcfsf, destfsf)
+    sed('NNNNN', npts, destfsf)
+    sed('TTTTT', tr, destfsf)
+    sed('FUNCFILE', theinputfile, destfsf)
+    sed('SLICETIMESFILE', slicetimefilename, destfsf)
+    sed('DOSTATSYN', dostats, destfsf)
+    sed('HPFILTYN', dohpfilt, destfsf)
+    sed('SPSMOOTH', spsmooth, destfsf)
+    sed('ECHOTIME', echotime, destfsf)
+    sed('WWWWW', thewarpres, destfsf)
+    sed('TARGETDIR', targetdir, destfsf)
+    sed('TARGETFEAT', targetroot, destfsf)
+    sed('ANATFILE', theanatscan, destfsf)
+    sed('REGRESSORFILE', regressorfile, destfsf)
+    sed('QQQQQ', os.getenv('FSLDIR'), destfsf)
+
+    # remove any previous run directory
+    if not fake:
+        try:
+            shutil.rmtree(os.path.join(targetdir, targetroot + '.feat'))
+        except Exception as E:
+            pass
+
+    # and launch the processing
+    aromacmd = ['feat', targetroot + '.fsf']
+    return targetdir, aromacmd
+
+
+def makeautobetcommand(theinputfileroot, debug=False):
+    autobetcmd = ['fsl_sub', '/home/frederic/bin/autobet', theinputfileroot]
+    return autobetcmd
+
+
+def makecheckbetcommand(thebrainfile, debug=False):
+    autobetcmd = ['fsleyes', thebrainfile.replace('_brain',''), thebrainfile, '-cm', 'red', '-a', '25']
+    return autobetcmd
+
+def makereg2stdcommand(rootdir, theinputfileroot, outputfiledir, debug=False):
+    # get the important components of the path
+    subject = os.path.basename(theinputfileroot)
+    procpath = pjoin(rootdir, 'derivatives', 'fsl', subject + '.feat')
+    if debug:
+        print(subject, procpath)
+
+    # and construct the command
+    regcmd = ['fsl_sub', '/cm/shared/anaconda3/bin/rapidtide2std', theinputfileroot, outputfiledir, procpath]
+    return regcmd
+
+
+def makerapidtidecommand(theinputfile, outputfiledir, debug=False):
+    themaskfile = theinputfile.replace('_preproc', '_brainmask')
+    procpath = os.path.dirname(os.path.dirname(theinputfile))
+    subjroot, subject = os.path.split(procpath)
+    subject = subject.replace('.feat', '')
+    if debug:
+        print("theinputfile", theinputfile)
+        print("themaskfile", theinputfile)
+        print("procpath", procpath)
+        print("subject", subject)
+
+    theoutputroot = os.path.join(outputfiledir, subject + '_x')
+
+    # and construct the command
+    rapidtidecmd = ['fsl_sub', '/cm/shared/anaconda3/bin/rapidtide2x', theinputfile, theoutputroot]
+    rapidtidecmd.append('-r')
+    rapidtidecmd.append('-10,20')
+    rapidtidecmd.append('-L')
+    rapidtidecmd.append('--refinepasses=3')
+    rapidtidecmd.append('--refineoffset')
+    rapidtidecmd.append('-f')
+    rapidtidecmd.append('3')
+    rapidtidecmd.append('--ampthresh=0.2')
+    rapidtidecmd.append('--lagminthresh=0.25')
+    #rapidtidecmd.append('--corrmask=' + themaskfile)
+    rapidtidecmd.append('--noglm')
+    #rapidtidecmd.append('--despecklepasses=4')
+    return rapidtidecmd
+
+
+def main():
+    fake = False
+    debug = False
+    inputlist = None
+    inputlistfile = None
+
+    # get the command line parameters
+    try:
+        opts, args = getopt.gnu_getopt(sys.argv, "F", ["help", "debug", "inputlist=", "fake"])
+    except getopt.GetoptError as err:
+        # print help information and exit:
+        print(str(err))  # will print something like 'option -a not recognized'
+        usage(processingtype)
+        sys.exit(2)
+
+    # now parse options
+    for o, a in opts:
+        linkchar = ' '
+        if o == '--fake':
+            fake = True
+            print('just a test run')
+        elif o == '--debug':
+            debug = True
+            print('turning on debugging')
+        elif o == '--inputlist':
+            inputlistfile = a
+            linkchar = '='
+            print('using subject list in file ', inputlistfile)
+        else:
+            assert False, 'unhandled option'
+            usage(processingtype)
+            sys.exit(2)
+
+    args = sys.argv[1:]
+    processingtype = sys.argv[0].split('_')[1]
+    print("processing type is", processingtype)
+
+    rootdir = os.path.abspath('..')
+
+    # make sure there is a place to put the results
+    if processingtype == "dorapidtide" or processingtype == "reg2std":
+        outputfiledir = os.path.join(rootdir, 'derivatives', 'rapidtide')
+        try:
+            os.makedirs(outputfiledir)
+        except OSError:
+            pass
+
+    # determine which files are there to be analyzed
+    if inputlistfile is not None:
+        inputlist = readlist(inputlistfile)
+
+    if processingtype == "dorapidtide":
+        theinputfilelist = getrapidtideinputs(rootdir, inputlist)
+    elif processingtype == "reg2std":
+        theinputfilelist = getreg2stdinputs(rootdir, outputfiledir, inputlist, debug=debug)
+    elif processingtype == "aromas":
+        theinputfilelist = getaromainputs(rootdir, inputlist)
+    elif processingtype == "autobet":
+        theinputfilelist = getautobetinputs(rootdir, inputlist)
+    elif processingtype == "checkbet":
+        theinputfilelist = getcheckbetinputs(rootdir, inputlist)
+    elif processingtype == "runfeats":
+        theinputfilelist = getrunfeatinputs(rootdir, inputlist, debug=debug)
+    else:
+        print('unsupported processing type:', processingtype)
+        sys.exit()
+
+
+    # loop over all input files
+    thedir = None
+    for theinputfile in theinputfilelist:
+        # construct the command
+        if processingtype == "dorapidtide":
+            thecmd = makerapidtidecommand(theinputfile, outputfiledir, debug=debug)
+        elif processingtype == "reg2std":
+            thecmd = makereg2stdcommand(rootdir, theinputfile, outputfiledir, debug=debug)
+        elif processingtype == "aromas":
+            thecmd = makearomacommand(theinputfile, fake)
+        elif processingtype == "autobet":
+            thecmd = makeautobetcommand(theinputfile)
+        elif processingtype == "checkbet":
+            thecmd = makecheckbetcommand(theinputfile)
+            print(theinputfile)
+        elif processingtype == "runfeats":
+            thedir, thecmd = makefeatcommand(rootdir, theinputfile, fake)
+        else:
+            print('unsupported processing type:', processingtype)
+            sys.exit()
+        
+        if fake:
+            if thedir is None:
+                print(' '.join(thecmd))
+            else:
+                print(' '.join(['cd', thedir, ';'] + thecmd))
+        else:
+            if thedir is None:
+                subprocess.call(thecmd)
+            else:
+                os.chdir(thedir)
+                subprocess.call(thecmd)
+
+
+if __name__ == "__main__":
+    main()
