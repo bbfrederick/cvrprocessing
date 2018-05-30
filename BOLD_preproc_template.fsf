@@ -15,7 +15,7 @@ set fmri(level) 1
 # 7 : Full first-level analysis
 # 1 : Pre-processing
 # 2 : Statistics
-set fmri(analysis) 1
+set fmri(analysis) ANALYSISTYPE
 
 # Use relative filenames
 set fmri(relative_yn) 0
@@ -282,7 +282,7 @@ set fmri(confoundevs) 0
 set highres_files(1) "ANATFILE"
 
 # EV 1 title
-set fmri(evtitle1) ""
+set fmri(evtitle1) "EVTITLE"
 
 # Basic waveform shape (EV 1)
 # 0 : Square
@@ -291,7 +291,7 @@ set fmri(evtitle1) ""
 # 3 : Custom (3 column format)
 # 4 : Interaction
 # 10 : Empty (all zeros)
-set fmri(shape1) 0
+set fmri(shape1) 3
 
 # Convolution (EV 1)
 # 0 : None
@@ -301,7 +301,7 @@ set fmri(shape1) 0
 # 4 : Gamma basis functions
 # 5 : Sine basis functions
 # 6 : FIR basis functions
-set fmri(convolve1) 2
+set fmri(convolve1) 0
 
 # Convolve phase (EV 1)
 set fmri(convolve_phase1) 0
@@ -311,6 +311,9 @@ set fmri(tempfilt_yn1) 1
 
 # Add temporal derivative (EV 1)
 set fmri(deriv_yn1) 1
+
+# Custom EV file (EV 1)
+set fmri(custom1) "REGRESSORFILE"
 
 # Skip (EV 1)
 set fmri(skip1) 0

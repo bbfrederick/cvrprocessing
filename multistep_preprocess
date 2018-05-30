@@ -234,26 +234,46 @@ def makefeatcommand(rootdir, theinputfile, fake, debug=False):
     npts = hdrinfo['dim4']
     thewarpres = '10'
     spsmooth = '3'
+    discard = '10'
+    discardtime = float(discard) * float(tr)
 
     srcfsf = 'BOLD_preproc_template.fsf'
     if scanname.find('task-rest') > -1:
         dostats = '0'
         dohpfilt = '1'
-        regressorfile = ''
+        analysistype = '1'
+        regressorfilename = ''
+        evtitle = ''
     elif scanname.find('task-breathhold') > -1:
         dostats = '1'
         dohpfilt = '1'
-        regressorfile = os.path.join(rootdir, 'analysis', 'breathhold.txt')
+        analysistype = '7'
+        evtitle = 'breathhold'
+        regressorinfile = os.path.join(rootdir, 'code', 'breathhold.txt')
+        regressordata = tide.readvecs(regressorinfile)
+        regressordata[0, :] -= discardtime
+        regressorfilename = os.path.join(targetdir, subject + '_' + scanname + '_bh_regressor.txt')
+        tide.writenpvecs(regressordata, regressorfilename)
     elif scanname.find('task-block') > -1:
         dostats = '1'
         dohpfilt = '0'
-        regressorfile = os.path.join(rootdir, 'analysis', 'gas.txt')
+        analysistype = '7'
+        evtitle = 'gas'
+        regressorinfile = os.path.join(rootdir, 'code', 'gas.txt')
+        regressordata = tide.readvecs(regressorinfile)
+        regressordata[0, :] -= discardtime
+        regressorfilename = os.path.join(targetdir, subject + '_' + scanname + '_gas_regressor.txt')
+        tide.writenpvecs(regressordata, regressorfilename)
     else:
         print('unknown functional file type')
         sys.exit()
+
     sed('SCSCSC', theinputfile, srcfsf, destfsf)
     sed('NNNNN', npts, destfsf)
     sed('TTTTT', tr, destfsf)
+    sed('DISCARD', discard, destfsf)
+    sed('ANALYSISTYPE', analysistype, destfsf)
+    sed('EVTITLE', evtitle, destfsf)
     sed('FUNCFILE', theinputfile, destfsf)
     sed('SLICETIMESFILE', slicetimefilename, destfsf)
     sed('DOSTATSYN', dostats, destfsf)
@@ -264,7 +284,7 @@ def makefeatcommand(rootdir, theinputfile, fake, debug=False):
     sed('TARGETDIR', targetdir, destfsf)
     sed('TARGETFEAT', targetroot, destfsf)
     sed('ANATFILE', theanatscan, destfsf)
-    sed('REGRESSORFILE', regressorfile, destfsf)
+    sed('REGRESSORFILE', regressorfilename, destfsf)
     sed('QQQQQ', os.getenv('FSLDIR'), destfsf)
 
     # remove any previous run directory
