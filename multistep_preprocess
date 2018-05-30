@@ -237,7 +237,7 @@ def makefeatcommand(rootdir, theinputfile, fake, debug=False):
     discard = '10'
     discardtime = float(discard) * float(tr)
 
-    srcfsf = 'BOLD_preproc_template.fsf'
+    srcfsf = os.path.join(rootdir, 'code','BOLD_preproc_template.fsf')
     if scanname.find('task-rest') > -1:
         dostats = '0'
         dohpfilt = '1'
