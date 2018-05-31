@@ -112,7 +112,7 @@ def getcheckbetinputs(rootdir, inputlist):
     return anatnames
 
 
-def getrunfeatinputs(rootdir, inputlist, debug=False):
+def getrawboldfiles(rootdir, inputlist, debug=False):
     if inputlist is None:
         searchpath = pjoin(rootdir, '*', 'func', '*_rec-mag_bold.nii.gz')
         if debug:
@@ -128,7 +128,7 @@ def getrunfeatinputs(rootdir, inputlist, debug=False):
     return boldnames
 
 
-def getaromainputs(rootdir, inputlist):
+def getpreprocboldfiles(rootdir, inputlist):
     if inputlist is None:
         fmrinames = sorted(glob.glob(pjoin(rootdir, 'derivatives', 'fsl', 'sub-*.feat', 'filtered_func_data.nii.gz')))
     else:
@@ -190,15 +190,35 @@ def makearomacommand(theinputfile, fake):
             pass
 
     # and launch the processing
-    aromacmd = ['fsl_sub', os.path.join('/cm/shared/ICA-AROMA', 'ICA_AROMA.py'), '-f', funcdir, '-o', targetdir]
+    aromacmd = ['fsl_sub', tide.findexecutable('ICA_AROMA.py'), '-f', funcdir, '-o', targetdir]
     return aromacmd
 
  
+def makehappycommand(rootdir, theinputfile, fake, debug=False):
+    # get the important components of the path
+    funcdir, filename = os.path.split(theinputfile)
+    fileparts = filename.split('_')
+    subject = fileparts[0]
+    scanname = fileparts[1] + '_' + fileparts[2]
+    targetdir = os.path.join(rootdir, 'derivatives', 'rapidtide', subject)
+    targetroot = subject + '_' + scanname + '_happy'
+
+    # create targetdir if it doesn't exist
+    try:
+        os.makedirs(targetdir)
+    except OSError:
+        pass
+
+
+    # and launch the processing
+    happycmd = ['fsl_sub', tide.findexecutable('happy'), theinputfile, theinputfile.replace('.nii.gz', '.json'), os.path.join(targetdir, targetroot), '--glm']
+    return targetdir, happycmd
+
+
 def makefeatcommand(rootdir, theinputfile, fake, debug=False):
     # get the important components of the path
     funcdir, filename = os.path.split(theinputfile)
     fileparts = filename.split('_')
-    print(fileparts)
     subject = fileparts[0]
     scanname = fileparts[1] + '_' + fileparts[2]
     targetdir = os.path.join(rootdir, 'derivatives', 'fsl', subject)
@@ -295,8 +315,8 @@ def makefeatcommand(rootdir, theinputfile, fake, debug=False):
             pass
 
     # and launch the processing
-    aromacmd = ['feat', targetroot + '.fsf']
-    return targetdir, aromacmd
+    featcmd = ['feat', targetroot + '.fsf']
+    return targetdir, featcmd
 
 
 def makeautobetcommand(theinputfileroot, debug=False):
@@ -406,13 +426,15 @@ def main():
     elif processingtype == "reg2std":
         theinputfilelist = getreg2stdinputs(rootdir, outputfiledir, inputlist, debug=debug)
     elif processingtype == "aromas":
-        theinputfilelist = getaromainputs(rootdir, inputlist)
+        theinputfilelist = getpreprocboldfiles(rootdir, inputlist)
     elif processingtype == "autobet":
         theinputfilelist = getautobetinputs(rootdir, inputlist)
     elif processingtype == "checkbet":
         theinputfilelist = getcheckbetinputs(rootdir, inputlist)
+    elif processingtype == "runhappy":
+        theinputfilelist = getrawboldfiles(rootdir, inputlist, debug=debug)
     elif processingtype == "runfeats":
-        theinputfilelist = getrunfeatinputs(rootdir, inputlist, debug=debug)
+        theinputfilelist = getrawboldfiles(rootdir, inputlist, debug=debug)
     else:
         print('unsupported processing type:', processingtype)
         sys.exit()
@@ -433,6 +455,8 @@ def main():
         elif processingtype == "checkbet":
             thecmd = makecheckbetcommand(theinputfile)
             print(theinputfile)
+        elif processingtype == "runhappy":
+            thedir, thecmd = makehappycommand(rootdir, theinputfile, fake)
         elif processingtype == "runfeats":
             thedir, thecmd = makefeatcommand(rootdir, theinputfile, fake)
         else:
