@@ -112,6 +112,22 @@ def getcheckbetinputs(rootdir, inputlist):
     return anatnames
 
 
+def gethappyfiles(rootdir, inputlist, debug=False):
+    if inputlist is None:
+        searchpath = pjoin(rootdir, 'derivatives', 'rapidtide', '*', '*happy_app.nii.gz')
+        if debug:
+            print('searchpath is', searchpath)
+        happynames = sorted(glob.glob(searchpath))
+    else:
+        happynames = []
+        for thedir in inputlist:
+            searchpath = pjoin(rootdir, 'derivatives', 'rapidtide', thedir, '_rec-mag_bold.nii.gz')
+            if debug:
+                print('searchpath is', searchpath)
+            happynames.append(glob.glob(searchpath)[0])
+    return happynames
+
+
 def getrawboldfiles(rootdir, inputlist, debug=False):
     if inputlist is None:
         searchpath = pjoin(rootdir, '*', 'func', '*_rec-mag_bold.nii.gz')
@@ -209,9 +225,8 @@ def makehappycommand(rootdir, theinputfile, fake, debug=False):
     except OSError:
         pass
 
-
     # and launch the processing
-    happycmd = ['fsl_sub', tide.findexecutable('happy'), theinputfile, theinputfile.replace('.nii.gz', '.json'), os.path.join(targetdir, targetroot), '--glm']
+    happycmd = ['fsl_sub', tide.findexecutable('happy'), theinputfile, theinputfile.replace('.nii.gz', '.json'), os.path.join(targetdir, targetroot)]
     return targetdir, happycmd
 
 
@@ -336,7 +351,25 @@ def makereg2stdcommand(rootdir, theinputfileroot, outputfiledir, debug=False):
         print(subject, procpath)
 
     # and construct the command
-    regcmd = ['fsl_sub', '/cm/shared/anaconda3/bin/rapidtide2std', theinputfileroot, outputfiledir, procpath]
+    regcmd = ['fsl_sub', tide.findexecutable('rapidtide2std'), theinputfileroot, outputfiledir, procpath]
+    return regcmd
+
+
+def makereghappycommand(rootdir, theinputfile, fake, debug=False):
+    # get the important components of the path
+    outputdir, filename = os.path.split(theinputfile)
+    fileparts = filename.split('_')
+    if debug:
+        print(outputdir, fileparts)
+    subject = fileparts[0]
+    scanname = fileparts[1] + '_' + fileparts[2]
+    regdir = os.path.join(rootdir, 'derivatives', 'fsl', subject, subject + '_' + scanname + '_preprocess.feat')
+
+    if debug:
+        print(subject, outputdir, regdir)
+
+    # and construct the command
+    regcmd = ['fsl_sub', tide.findexecutable('rapidtide2std'), 'dummy', outputdir, regdir, '--onefile=' + theinputfile, '--hires']
     return regcmd
 
 
@@ -354,7 +387,7 @@ def makerapidtidecommand(theinputfile, outputfiledir, debug=False):
     theoutputroot = os.path.join(outputfiledir, subject + '_x')
 
     # and construct the command
-    rapidtidecmd = ['fsl_sub', '/cm/shared/anaconda3/bin/rapidtide2x', theinputfile, theoutputroot]
+    rapidtidecmd = ['fsl_sub', tide.findexecutable('rapidtide2x'), theinputfile, theoutputroot]
     rapidtidecmd.append('-r')
     rapidtidecmd.append('-10,20')
     rapidtidecmd.append('-L')
@@ -433,12 +466,16 @@ def main():
         theinputfilelist = getcheckbetinputs(rootdir, inputlist)
     elif processingtype == "runhappy":
         theinputfilelist = getrawboldfiles(rootdir, inputlist, debug=debug)
+    elif processingtype == "reghappy":
+        theinputfilelist = gethappyfiles(rootdir, inputlist, debug=debug)
     elif processingtype == "runfeats":
         theinputfilelist = getrawboldfiles(rootdir, inputlist, debug=debug)
     else:
         print('unsupported processing type:', processingtype)
         sys.exit()
 
+    if debug:
+        print('inputfilelist', theinputfilelist)
 
     # loop over all input files
     thedir = None
@@ -457,6 +494,8 @@ def main():
             print(theinputfile)
         elif processingtype == "runhappy":
             thedir, thecmd = makehappycommand(rootdir, theinputfile, fake)
+        elif processingtype == "reghappy":
+            thecmd = makereghappycommand(rootdir, theinputfile, fake, debug=debug)
         elif processingtype == "runfeats":
             thedir, thecmd = makefeatcommand(rootdir, theinputfile, fake)
         else:
