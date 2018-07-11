@@ -10,7 +10,7 @@ import re
 import shutil
 from tempfile import mkstemp
 import getopt
-import rapidtide.tide_funcs as tide
+import rapidtide.util as tide
 import numpy as np
 
 
