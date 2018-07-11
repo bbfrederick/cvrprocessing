@@ -18,3 +18,4 @@ plethproc ../sub-21/physio/CVR_21_pleth.txt ../sub-21/physio/CVR_21_pleth_recon 
 plethproc ../sub-24/physio/CVR_24_pleth.txt ../sub-24/physio/CVR_24_pleth_recon -S 32 -n fingertip  -s 120 -e -1300 -N
 plethproc ../sub-25/physio/CVR_25_pleth.txt ../sub-25/physio/CVR_25_pleth_recon -S 32 -n fingertip  -s 1000 -e -1200 -N
 plethproc ../sub-26/physio/CVR_26_pleth.txt ../sub-26/physio/CVR_26_pleth_recon -S 32 -n fingertip -s 1100 -e -1300 -N
+plethproc ../sub-28/physio/CVR_28_pleth.txt ../sub-28/physio/CVR_28_pleth_recon -S 32 -n fingertip -s 1100 -e -1300 -N

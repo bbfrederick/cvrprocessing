@@ -19,3 +19,4 @@ readbiopac ../sub-20/physio/CVR_20.acq ../sub-20/physio/CVR_20_translated.csv --
 readbiopac ../sub-21/physio/CVR_21.acq ../sub-21/physio/CVR_21_translated.csv --imtimes --initoffset=1406 --noopt --gasdelay=33.6 --noshow
 readbiopac ../sub-25/physio/CVR_25.acq ../sub-25/physio/CVR_25_translated.csv --imtimes --initoffset=1490.5 --noopt --gasdelay=33.6 --noshow
 readbiopac ../sub-26/physio/CVR_26.acq ../sub-26/physio/CVR_26_translated.csv --imtimes --initoffset=1584.3 --noopt --gasdelay=33.6 --noshow
+readbiopac ../sub-28/physio/CVR_28.acq ../sub-28/physio/CVR_28_translated.csv --imtimes --initoffset=1277.75 --noopt --gasdelay=33.6 
