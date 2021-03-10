@@ -1,0 +1,47 @@
+For a new subject, with name sub-XX, do the following, assuming you are in this (code) directory,
+and the new dicoms have been placed in ../sub-XX/sourcedata, and the physiological data have
+been put in ../sub-XX/physio/CVR_XX.acq (biopac) and ../sub-XX/CVR_XX_pleth.txt (nirs) respectively:
+
+
+1) Rename the dicom directories to conform to our standard naming:
+    step10_renamedicomdirs ../sub-XX
+
+2) Convert dicoms to nifti:
+    step20_cvtdcmtonii ../sub-XX
+
+3) Convert and align the biopac data. This is an iterative process. First run:
+    readbiopac ../sub-XX/physio/CVR_XX.acq ../sub-XX/physio/CVR_XX_translated.csv --imtimes --noopt --gasdelay=33.6    
+
+    This will generate a plot showing the gas and respiration traces, and the scanner triggers (in black),
+    and the estimated positions of the scans from the fmri timestamps (in red).  Functional runs look like solid
+    blocks of color because they have markers for every TR - ASL markers come at seemingly random times - so in
+    the red trace there is just an envelope function showing the duration of the ASL scans.
+    The red timestamps will start at 0.  You'll need to line up the pulse trains.  Basically find a part of the black
+    and red traces that are clearly the same, and use the zoom to figure out the locations of the beginning of the same
+    block in each trace.  Then rerun readbiopac adding the "--initoffset=XXX" flag, where XXX is the amount of seconds
+    to delay the red trace to get it to line up with the black trace.   For example:
+
+    readbiopac ../sub-XX/physio/CVR_XX.acq ../sub-XX/physio/CVR_XX_translated.csv --imtimes --noopt --gasdelay=33.6 --initoffset=1234.0
+
+    Keep zooming in and tweaking initoffset until you are satisfied.
+
+4) Reconstruct the NIRS data:
+    plethproc ../sub-XX/physio/CVR_XX_pleth.txt ../sub-XX/physio/CVR_XX_pleth_recon -S 32 -n fingertip 
+	
+    This converts the raw pleth data into HbO and HbR traces.  Look at the traces - if there are large transients at the 
+    beginning or end of the data, you can rerun this to eliminate them using the -s and -e flags, to set the start and end
+    times.  If the first 100 and last 300 points are bad, you'd run this:
+
+    plethproc ../sub-XX/physio/CVR_XX_pleth.txt ../sub-XX/physio/CVR_XX_pleth_recon -S 32 -n fingertip -s 100 -e -300
+
+    (Negative points are counted from the end of the dataset.  You could also have used the absolute position, for example
+    -e 6540)
+
+5) Now that you have clean data, run readnirs to align the NIRS data:
+    readnirs ../sub-XX/physio/CVR_XX_pleth_recon_alldata.txt ../sub-XX/physio/sub-XX_recording-nirsall_physio.txt --imtimes
+
+    readnirs usually aligns data automatically fairly well.  If it doesn't, you can force it to the right offset, just like 
+    readbiopac by adding the "--initoffset=XYZ --noopt" to set it iteratively the same way you did above.
+
+6) That's it!  You're ready to go.  Add the final working version of the readbiopac, plethproc, and readnirs commands you used
+    to the runbiopacs, runplethprocs, and runnirs files respectively so we have a record of how to process each file.

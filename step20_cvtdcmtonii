@@ -35,7 +35,7 @@ def convertdicoms(subjectdir, dicomsubdir, niftisubdir, niftiname):
         except:
             pass
         print(sourcedir, destdir, niftiname)
-        dcm2niicmd = ['dcm2niix', '-b', '-z', 'y', '-f', niftiname , '-o', destdir, sourcedir]
+        dcm2niicmd = ['dcm2niix', '-b', 'y', '-z', 'y', '-f', niftiname , '-o', destdir, sourcedir]
         subprocess.call(dcm2niicmd)
     else:
         print(sourcedir, 'does not exist - skipping')
@@ -55,6 +55,9 @@ def main():
 
     anatscans = [['MEMPRAGE_gr2_RMS', 'T1w'],
                 ['PC_3D_30_30_30', 'acq-PC30_angio'],
+                ['PC_3D_30_30_30_MSUM', 'acq-PC30MSUM_angio'],
+                ['pd+t2_tse_tra', 'PDT2'],
+                ['t2_tse_darkfluid_tra', 'FLAIR'],
                 ['tof_fl3d_tra_p2', 'acq-tof_angio']]
     for thescan in anatscans:
         convertdicoms(subjectdir, thescan[0], 'anat', thesubject + '_' + thescan[1])

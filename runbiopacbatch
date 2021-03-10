@@ -1,0 +1,27 @@
+# sbatch ~/software/bin/doreadbiopac 34 1169.72 33.6
+sbatch ~/software/bin/doreadbiopac 01/physio/CVR_01.acq ../sub-01/physio/CVR_01_translated.csv --imtimes 1200 20.1 
+####sbatch ~/software/bin/doreadbiopac 02/physio/CVR_02.acq ../sub-02/physio/CVR_02_translated.csv
+sbatch ~/software/bin/doreadbiopac 04 715 20.1 
+sbatch ~/software/bin/doreadbiopac 05 2656.05 20.1 
+sbatch ~/software/bin/doreadbiopac 06  69.7 20.1 
+sbatch ~/software/bin/doreadbiopac 07 -24.52 20.1 
+sbatch ~/software/bin/doreadbiopac 08 1546 20.1  
+sbatch ~/software/bin/doreadbiopac 09 414.6 20.1 
+sbatch ~/software/bin/doreadbiopac 10 804  20.1 
+sbatch ~/software/bin/doreadbiopac 12 1310 20.1 
+sbatch ~/software/bin/doreadbiopac 13 1530 20.1 
+sbatch ~/software/bin/doreadbiopac 14 3245 20.1 
+sbatch ~/software/bin/doreadbiopac 16 2283.35 20.1 
+sbatch ~/software/bin/doreadbiopac 17 1862.2 20.1 
+sbatch ~/software/bin/doreadbiopac 18 451.9 20.1 
+sbatch ~/software/bin/doreadbiopac 19 901 20.1 
+sbatch ~/software/bin/doreadbiopac 20 1128 33.6 
+sbatch ~/software/bin/doreadbiopac 21 1406 33.6 
+sbatch ~/software/bin/doreadbiopac 25 1490.5 33.6 
+sbatch ~/software/bin/doreadbiopac 26 1584.3 33.6 
+sbatch ~/software/bin/doreadbiopac 28 1277.75 33.6 
+sbatch ~/software/bin/doreadbiopac 30 2044.12 33.6 
+sbatch ~/software/bin/doreadbiopac 32 1501.64 33.6 
+sbatch ~/software/bin/doreadbiopac 33 533.08 33.6 
+sbatch ~/software/bin/doreadbiopac 34 1169.72 33.6 
+sbatch ~/software/bin/doreadbiopac 35 1934.13 33.6 

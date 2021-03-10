@@ -38,7 +38,7 @@ def main():
     # determine which files are there to be analyzed
     subjectdir = args[0]
 
-    nonfmriscans = ['MEMPRAGE_gr2_RMS', 'PC_3D_30_30_30', 'tof_fl3d_tra_p2', 'MPCASL3DCO_1', 'MPCASL3DCO_2', 'MPCASL3DMA_1', 'MPCASL3DMA_2', 'MPCASL3DO2_1', 'MPCASL3DO2_2']
+    nonfmriscans = ['MEMPRAGE_gr2_RMS', 'PC_3D_30_30_30', 'PC_3D_30_30_30_MSUM', 'pd+t2_tse_tra', 't2_tse_darkfluid_tra', 'tof_fl3d_tra_p2', 'MPCASL3DCO_1', 'MPCASL3DCO_2', 'MPCASL3DMA_1', 'MPCASL3DMA_2', 'MPCASL3DO2_1', 'MPCASL3DO2_2']
     for scanname in nonfmriscans:
         dirnames = sorted(glob.glob(pjoin(subjectdir, 'sourcedata', scanname + '_[0-9]'))) \
             + sorted(glob.glob(pjoin(subjectdir, 'sourcedata', scanname + '_[0-9][0-9]')))

@@ -17,6 +17,8 @@ import json
 import bisect
 import gzip
 
+import rapidtide.resample as tide_resample
+
 def marker_formatter(acq_filename, graph_sample_msec):
     """ Return a function that turns a marker into a dict. """
     def f(marker):
@@ -147,7 +149,7 @@ def usage():
     print("")
     print("readbiopac - read a biopac acq file and convert to text")
     print("")
-    print("    usage:  readbiopac inputfile [--noshow] [--gasdelay=DELAYTIME] [--imtimes] [--initoffset=OFFSET] [--noopt] [--trim]")
+    print("    usage:  readbiopac inputfile [--noshow] [--gasdelay=DELAYTIME] [--imtimes] [--initoffset=OFFSET] [--noopt] [--trim] [--skipdelaycalc]")
     print("")
 
 # initialize variables
@@ -166,9 +168,11 @@ tr = 0.75
 triggerexists = True
 respexists = True
 debug = False
+padvalue = 45.0
+skipdelaycalc = False
 
 try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "X", ["noshow", "imtimes", "debug", "gasdelay=", "initoffset=", "noopt", "trim"])
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "X", ["noshow", "imtimes", "debug", "gasdelay=", "initoffset=", "noopt", "trim", "skipdelaycalc"])
 except getopt.GetoptError as err:
     # print help information and exit:
     print(str(err))  # will print something like "option -x not recognized"
@@ -191,6 +195,9 @@ for o, a in opts:
         imtimes = True
         trim = True
         print('will trim output display to scan time')
+    elif o == "--skipdelaycalc":
+        skipdelaycalc = True
+        print('will skip gas delay to save time')
     elif o == "--noopt":
         imtimes = True
         optimize = False
@@ -238,11 +245,15 @@ for idx,thechannel in enumerate(data.channels):
     channeldict[channelname]['frequency_divider'] = data.channels[idx].frequency_divider
     channeldict[channelname]['timeaxis'] = np.arange(0.0, len(data.channels[idx].data)) / data.channels[idx].samples_per_second
     channeldict[channelname]['upsampled_timeaxis'] = np.arange(0.0, len(data.channels[idx].upsampled_data)) / (data.channels[idx].samples_per_second * data.channels[idx].frequency_divider)
-    if channelname == u'O2' or channelname == u'CO2':
-        channeldict[channelname]['timeaxis'] -= gasdelay
-        channeldict[channelname]['upsampled_timeaxis'] -= gasdelay
-    channeldict[channelname]['waveform'] = 1.0 * data.channels[idx].data
-    channeldict[channelname]['upsampled_waveform'] = 1.0 * data.channels[idx].upsampled_data
+    if (channelname == u'O2' or channelname == u'CO2') and not skipdelaycalc:
+        print('correcting for gas delay on channel', channelname)
+        gasshift = -gasdelay * data.channels[idx].samples_per_second
+        gasshift_upsampled = gasshift * data.channels[idx].frequency_divider
+        channeldict[channelname]['waveform'] = tide_resample.timeshift(data.channels[idx].data, gasshift, int(2 * abs(gasshift)))[0]
+        channeldict[channelname]['upsampled_waveform'] = tide_resample.timeshift(data.channels[idx].upsampled_data, gasshift_upsampled, int(2 * abs(gasshift_upsampled)))[0]
+    else:
+        channeldict[channelname]['waveform'] = 1.0 * data.channels[idx].data
+        channeldict[channelname]['upsampled_waveform'] = 1.0 * data.channels[idx].upsampled_data
     channeldict[channelname]['raw_scale_factor'] = 1.0 * data.channels[idx].raw_scale_factor
     channeldict[channelname]['raw_offset'] = 1.0 * data.channels[idx].raw_offset
     thelengths.append(len(data.channels[idx].upsampled_data))
@@ -325,7 +336,10 @@ if imtimes:
                 pass
             with open(events[eventname]['file'], 'r') as fp:
                 thejsondata = json.load(fp)
-                events[eventname]['starttimestr'] = thejsondata['AcquisitionDateTime']
+                try:
+                    events[eventname]['starttimestr'] = thejsondata['AcquisitionDateTime']
+                except:
+                    events[eventname]['starttimestr'] = '2018-01-01T' + thejsondata['AcquisitionTime']
             timestruct = time.strptime(events[eventname]['starttimestr'][0:16], "%Y-%m-%dT%H:%M")
             integerseconds = time.mktime(timestruct)
             #integerseconds = time.mktime(time.strptime(events[eventname]['starttimestr'][0:16], "%Y-%m-%dT%H:%M"))
@@ -408,7 +422,7 @@ if imtimes:
             means, stds = writewaves(trimmedroot, 'gas', events[val]['absstarttime'], events[val]['absendtime'], upsampletime, funcpath,
                 channeldict[u'O2']['upsampled_timeaxis'][0:safelength],
                 channelnames,
-                waveforms)
+                waveforms, padtime=padvalue)
             o2mean = means[0]
             co2mean = means[1]
             o2std = stds[0]
@@ -454,7 +468,6 @@ if display:
         dispmin = np.min(mintimes)
         dispmax = np.max(maxtimes)
         dispoffset = 0.0
-        padvalue = 30.0
         if trim:
             dispoffset = -scanningstart
             dispmin = -padvalue

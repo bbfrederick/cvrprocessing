@@ -1,0 +1,88 @@
+#!/bin/csh -f
+
+set T2_asl=../derivatives/fmriprep/sub-26/anat/sub-26_T1w_preproc.nii.gz
+set T1_target=../sub-26/anat/sub-26_acq-air_T2w.nii.gz
+
+
+#Make a functional target from the mean image
+#fslmaths \
+#    ../100206/unprocessed/3T/rfMRI_REST1_LR/100206_3T_rfMRI_REST1_LR \
+#    -Tmean \
+#    fmritarget
+#
+#fsleyes \
+#    fmritarget \
+#    csfmaskinnative.nii.gz
+#
+#fslmerge -t 100206_3T_SpinEchoFieldMap_LRRL.nii.gz \
+#    ../100206/unprocessed/3T/rfMRI_REST1_LR/100206_3T_SpinEchoFieldMap_LR.nii.gz \
+#    ../100206/unprocessed/3T/rfMRI_REST1_LR/100206_3T_SpinEchoFieldMap_RL.nii.gz
+#
+#topup --imain=100206_3T_SpinEchoFieldMap_LRRL.nii \
+#    --datain=topup_lrrl.txt \
+#    --config=b02b0.cnf
+ 
+# Make a dilated mask
+fslmaths brainmask_fs.nii.gz -dilM dilatedmask
+
+# make a dilated brain
+fslmaths T1w_acpc_dc_restore.nii.gz -mul dilatedmask T1w_bigbrain
+
+#Make CSF mask in T1 space
+fast --out=seg T1w_bigbrain
+
+# affine registration of SBRef to normalized corrected T2 (better match than T1)
+antsRegistrationSyNQuick.sh \
+    -d 3 \
+    -n 4 \
+    -f ../derivatives/fmriprep/sub-26/anat/sub-26_T1w_preproc.nii.gz \
+    -m ../sub-26/anat/sub-26_acq-air_T2w.nii.gz \
+    -o t2tot1_ -t s
+
+antsApplyTransforms -d 3 \
+    -i seg_pve_0.nii.gz \
+    -r 100206_3T_rfMRI_REST1_LR_SBRef.nii.gz \
+    -n BSpline \
+    -o csf_in_epispace.nii.gz \
+    -t '[epi2anat_0GenericAffine.mat,1]' \
+    -t '[epi2anat_1InverseWarp.nii.gz]'
+
+# make a csf mask
+fslmaths csf_in_epispace -thr 0.75 csfmask
+
+
+#
+#antsApplyTransforms -d 3 -o '[AFFINE_diffCollapsedWarp.nii.gz,1]' \
+#    -t AFFINE_diff1Warp.nii.gz \
+#    -r fixed.nii.gz
+
+
+
+
+
+#antsRegistration --dimensionality 3  \
+#      --output '[transform,forward.nii.gz,backward.nii.gz]' \
+#      --use-histogram-matching 1 \
+#      --interpolation Linear \
+#      --winsorize-image-intensities '[0.005,0.995]' \
+#      --transform 'SyN[0.1,3,0.0]' \
+#      --convergence '[15x2,1e-6,4]' \
+#      --shrink-factors 2x1 \
+#      --metric 'MeanSquares[fixed.nii.gz,moving.nii.gz,1]' \
+#      --smoothing-sigmas 1x0vox 
+
+
+#Use antsApplyTransforms to combine the displacement field and affine matrix into a single concatenated transformation stored as a displacement field.
+
+# collapse the transformations to a displacement field
+#antsApplyTransforms -d 3 -o '[AFFINE_diffCollapsedWarp.nii.gz,1]' \
+#    -t AFFINE_diff1Warp.nii.gz \
+#    -r fixed.nii.gz
+
+
+      #--metric meansquares '[/data2/HCP1200/100206/preproc/100206/T1w/T1w_acpc_dc_restore_brain.nii.gz,/data1/frederic/physioconn/100206/unprocessed/3T/rfMRI_REST1_LR/100206_3T_rfMRI_REST1_LR_SBRef.nii.gz,1]' \
+#applywarp \
+#    -i fmritarget \
+#    -o fmriunwarped \
+#    -r fmritarget \
+#    -w /data2/HCP1200/100206/preproc/100206/MNINonLinear/xfms/NonlinearRegJacobians.nii.gz

@@ -181,13 +181,15 @@ subjpath, dummy = os.path.split(physiopath)
 rootpath, subjnum = os.path.split(subjpath)
 funcpath = os.path.join(subjpath, 'func')
 
-data = pd.read_csv(inputfile, header=0, engine='python', sep=r"\s*")
+data = pd.read_csv(inputfile, header=0, engine='python', sep="\t")
 if debug:
-    print(thedata)
+    print(data)
 rawtimeaxis = data['Time'].values - data['Time'].values[0]
 triggerwaveform = 5.0 * data['external'].values
 sampletime = (rawtimeaxis[-1] - rawtimeaxis[0]) / (len(rawtimeaxis) - 1.0)
 savechannels = [
+    'fingertip_IR',
+    'fingertip_VS',
     'fingertip_HbOraw',
     'fingertip_HbOlfo',
     'fingertip_HbOcard',
